@@ -74,4 +74,91 @@ describe("SplitStream", function () {
             ).to.be.revertedWith("SplitStream: shares are 0");
         });
     });
+
+    describe("Payment Release", function () {
+        beforeEach(async function () {
+            // Send 1 ETH to the contract
+            await owner.sendTransaction({
+                to: await splitStream.getAddress(),
+                value: ethers.parseEther("1")
+            });
+        });
+
+        it("Should allow payee1 to release their correct share (0.5 ETH for 50%)", async function () {
+            const balanceBefore = await ethers.provider.getBalance(payee1.address);
+
+            const tx = await splitStream.release(payee1.address);
+            const receipt = await tx.wait();
+            const gasUsed = receipt.gasUsed * receipt.gasPrice;
+
+            const balanceAfter = await ethers.provider.getBalance(payee1.address);
+            const expectedPayment = ethers.parseEther("0.5");
+
+            expect(balanceAfter - balanceBefore + gasUsed).to.equal(expectedPayment);
+            expect(await splitStream.released(payee1.address)).to.equal(expectedPayment);
+        });
+
+        it("Should allow payee2 to release their correct share (0.3 ETH for 30%)", async function () {
+            const balanceBefore = await ethers.provider.getBalance(payee2.address);
+
+            const tx = await splitStream.release(payee2.address);
+            const receipt = await tx.wait();
+            const gasUsed = receipt.gasUsed * receipt.gasPrice;
+
+            const balanceAfter = await ethers.provider.getBalance(payee2.address);
+            const expectedPayment = ethers.parseEther("0.3");
+
+            expect(balanceAfter - balanceBefore + gasUsed).to.equal(expectedPayment);
+            expect(await splitStream.released(payee2.address)).to.equal(expectedPayment);
+        });
+
+        it("Should allow payee3 to release their correct share (0.2 ETH for 20%)", async function () {
+            const balanceBefore = await ethers.provider.getBalance(payee3.address);
+
+            const tx = await splitStream.release(payee3.address);
+            const receipt = await tx.wait();
+            const gasUsed = receipt.gasUsed * receipt.gasPrice;
+
+            const balanceAfter = await ethers.provider.getBalance(payee3.address);
+            const expectedPayment = ethers.parseEther("0.2");
+
+            expect(balanceAfter - balanceBefore + gasUsed).to.equal(expectedPayment);
+            expect(await splitStream.released(payee3.address)).to.equal(expectedPayment);
+        });
+
+        it("Should revert when calling release twice (no double payment)", async function () {
+            // First release should succeed
+            await splitStream.release(payee1.address);
+
+            // Second release should revert
+            await expect(
+                splitStream.release(payee1.address)
+            ).to.be.revertedWith("SplitStream: account is not due payment");
+        });
+
+        it("Should revert when non-payee address tries to release", async function () {
+            await expect(
+                splitStream.release(owner.address)
+            ).to.be.revertedWith("SplitStream: account has no shares");
+        });
+
+        it("Should increase totalReleased correctly after each release", async function () {
+            expect(await splitStream.totalReleased()).to.equal(0);
+
+            await splitStream.release(payee1.address);
+            expect(await splitStream.totalReleased()).to.equal(ethers.parseEther("0.5"));
+
+            await splitStream.release(payee2.address);
+            expect(await splitStream.totalReleased()).to.equal(ethers.parseEther("0.8"));
+
+            await splitStream.release(payee3.address);
+            expect(await splitStream.totalReleased()).to.equal(ethers.parseEther("1"));
+        });
+
+        it("Should emit PaymentReleased event with correct parameters", async function () {
+            await expect(splitStream.release(payee1.address))
+                .to.emit(splitStream, "PaymentReleased")
+                .withArgs(payee1.address, ethers.parseEther("0.5"));
+        });
+    });
 });
