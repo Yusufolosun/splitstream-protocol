@@ -85,44 +85,38 @@ describe("SplitStream", function () {
         });
 
         it("Should allow payee1 to release their correct share (0.5 ETH for 50%)", async function () {
-            const balanceBefore = await ethers.provider.getBalance(payee1.address);
-
-            const tx = await splitStream.release(payee1.address);
-            const receipt = await tx.wait();
-            const gasUsed = receipt.gasUsed * receipt.gasPrice;
-
-            const balanceAfter = await ethers.provider.getBalance(payee1.address);
+            const contractAddress = await splitStream.getAddress();
+            const contractBalanceBefore = await ethers.provider.getBalance(contractAddress);
             const expectedPayment = ethers.parseEther("0.5");
 
-            expect(balanceAfter - balanceBefore + gasUsed).to.equal(expectedPayment);
+            await splitStream.release(payee1.address);
+
+            const contractBalanceAfter = await ethers.provider.getBalance(contractAddress);
+            expect(contractBalanceBefore - contractBalanceAfter).to.equal(expectedPayment);
             expect(await splitStream.released(payee1.address)).to.equal(expectedPayment);
         });
 
         it("Should allow payee2 to release their correct share (0.3 ETH for 30%)", async function () {
-            const balanceBefore = await ethers.provider.getBalance(payee2.address);
-
-            const tx = await splitStream.release(payee2.address);
-            const receipt = await tx.wait();
-            const gasUsed = receipt.gasUsed * receipt.gasPrice;
-
-            const balanceAfter = await ethers.provider.getBalance(payee2.address);
+            const contractAddress = await splitStream.getAddress();
+            const contractBalanceBefore = await ethers.provider.getBalance(contractAddress);
             const expectedPayment = ethers.parseEther("0.3");
 
-            expect(balanceAfter - balanceBefore + gasUsed).to.equal(expectedPayment);
+            await splitStream.release(payee2.address);
+
+            const contractBalanceAfter = await ethers.provider.getBalance(contractAddress);
+            expect(contractBalanceBefore - contractBalanceAfter).to.equal(expectedPayment);
             expect(await splitStream.released(payee2.address)).to.equal(expectedPayment);
         });
 
         it("Should allow payee3 to release their correct share (0.2 ETH for 20%)", async function () {
-            const balanceBefore = await ethers.provider.getBalance(payee3.address);
-
-            const tx = await splitStream.release(payee3.address);
-            const receipt = await tx.wait();
-            const gasUsed = receipt.gasUsed * receipt.gasPrice;
-
-            const balanceAfter = await ethers.provider.getBalance(payee3.address);
+            const contractAddress = await splitStream.getAddress();
+            const contractBalanceBefore = await ethers.provider.getBalance(contractAddress);
             const expectedPayment = ethers.parseEther("0.2");
 
-            expect(balanceAfter - balanceBefore + gasUsed).to.equal(expectedPayment);
+            await splitStream.release(payee3.address);
+
+            const contractBalanceAfter = await ethers.provider.getBalance(contractAddress);
+            expect(contractBalanceBefore - contractBalanceAfter).to.equal(expectedPayment);
             expect(await splitStream.released(payee3.address)).to.equal(expectedPayment);
         });
 
