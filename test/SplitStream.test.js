@@ -161,4 +161,54 @@ describe("SplitStream", function () {
                 .withArgs(payee1.address, ethers.parseEther("0.5"));
         });
     });
+
+    describe("Receive Function", function () {
+        it("Should receive ETH directly and increase contract balance", async function () {
+            const contractAddress = await splitStream.getAddress();
+            const balanceBefore = await ethers.provider.getBalance(contractAddress);
+
+            await owner.sendTransaction({
+                to: contractAddress,
+                value: ethers.parseEther("1")
+            });
+
+            const balanceAfter = await ethers.provider.getBalance(contractAddress);
+            expect(balanceAfter - balanceBefore).to.equal(ethers.parseEther("1"));
+        });
+
+        it("Should emit PaymentReceived event when ETH is sent", async function () {
+            const contractAddress = await splitStream.getAddress();
+
+            await expect(
+                owner.sendTransaction({
+                    to: contractAddress,
+                    value: ethers.parseEther("1")
+                })
+            ).to.emit(splitStream, "PaymentReceived")
+                .withArgs(owner.address, ethers.parseEther("1"));
+        });
+
+        it("Should accumulate multiple payments correctly", async function () {
+            const contractAddress = await splitStream.getAddress();
+            const initialBalance = await ethers.provider.getBalance(contractAddress);
+
+            // Send first payment of 0.5 ETH
+            await owner.sendTransaction({
+                to: contractAddress,
+                value: ethers.parseEther("0.5")
+            });
+
+            const balanceAfterFirst = await ethers.provider.getBalance(contractAddress);
+            expect(balanceAfterFirst - initialBalance).to.equal(ethers.parseEther("0.5"));
+
+            // Send second payment of 0.3 ETH
+            await owner.sendTransaction({
+                to: contractAddress,
+                value: ethers.parseEther("0.3")
+            });
+
+            const balanceAfterSecond = await ethers.provider.getBalance(contractAddress);
+            expect(balanceAfterSecond - initialBalance).to.equal(ethers.parseEther("0.8"));
+        });
+    });
 });
