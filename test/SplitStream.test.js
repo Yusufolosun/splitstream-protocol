@@ -38,4 +38,40 @@ describe("SplitStream", function () {
             expect(await splitStream.shares(payee3.address)).to.equal(20);
         });
     });
+
+    describe("Deployment Validation", function () {
+        it("Should revert when payees and shares arrays have different lengths", async function () {
+            const SplitStream = await ethers.getContractFactory("SplitStream");
+            await expect(
+                SplitStream.deploy([payee1.address], [50, 30])
+            ).to.be.revertedWith("SplitStream: payees and shares length mismatch");
+        });
+
+        it("Should revert when no payees are provided", async function () {
+            const SplitStream = await ethers.getContractFactory("SplitStream");
+            await expect(
+                SplitStream.deploy([], [])
+            ).to.be.revertedWith("SplitStream: no payees");
+        });
+
+        it("Should revert when a payee address is zero address", async function () {
+            const SplitStream = await ethers.getContractFactory("SplitStream");
+            await expect(
+                SplitStream.deploy(
+                    [ethers.ZeroAddress, payee2.address, payee3.address],
+                    [50, 30, 20]
+                )
+            ).to.be.revertedWith("SplitStream: account is the zero address");
+        });
+
+        it("Should revert when shares amount is zero", async function () {
+            const SplitStream = await ethers.getContractFactory("SplitStream");
+            await expect(
+                SplitStream.deploy(
+                    [payee1.address, payee2.address, payee3.address],
+                    [50, 0, 20]
+                )
+            ).to.be.revertedWith("SplitStream: shares are 0");
+        });
+    });
 });
