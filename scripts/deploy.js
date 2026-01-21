@@ -15,9 +15,14 @@ async function main() {
         console.log(`Chain ID: ${(await hre.ethers.provider.getNetwork()).chainId}\n`);
 
         // Define payees and shares
-        // NOTE: For testing, all payees are set to deployer address.
-        // In production, replace with actual different payee addresses.
-        const payees = [deployer.address, deployer.address, deployer.address];
+        // ⚠️ WARNING: These are PLACEHOLDER addresses for initial deployment testing.
+        // In PRODUCTION, replace these with your actual payee addresses before deploying!
+        // The contract requires each payee address to be unique.
+        const payees = [
+            "0x000000000000000000000000000000000000dEaD",  // Placeholder 1 (burn address)
+            "0x0000000000000000000000000000000000000001",  // Placeholder 2
+            "0x0000000000000000000000000000000000000002"   // Placeholder 3
+        ];
         const shares = [50, 30, 20];
 
         console.log("👥 Payee Configuration:");
