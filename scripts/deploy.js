@@ -15,7 +15,9 @@ async function main() {
         console.log(`Chain ID: ${(await hre.ethers.provider.getNetwork()).chainId}\n`);
 
         // Define payees and shares
-        const payees = [signers[1].address, signers[2].address, signers[3].address];
+        // NOTE: For testing, all payees are set to deployer address.
+        // In production, replace with actual different payee addresses.
+        const payees = [deployer.address, deployer.address, deployer.address];
         const shares = [50, 30, 20];
 
         console.log("👥 Payee Configuration:");
