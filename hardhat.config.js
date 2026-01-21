@@ -3,7 +3,7 @@ require("dotenv").config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.28",
+  solidity: "0.8.20",
   networks: {
     hardhat: {},
     base: {
@@ -13,9 +13,7 @@ module.exports = {
     },
   },
   etherscan: {
-    apiKey: {
-      base: process.env.BASESCAN_API_KEY || "",
-    },
+    apiKey: process.env.BASESCAN_API_KEY,
     customChains: [
       {
         network: "base",
@@ -27,4 +25,7 @@ module.exports = {
       }
     ]
   },
+  sourcify: {
+    enabled: false
+  }
 };
