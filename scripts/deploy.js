@@ -5,7 +5,8 @@ async function main() {
         console.log("🚀 Starting SplitStream deployment...\n");
 
         // Get signers
-        const [deployer, payee1, payee2, payee3] = await hre.ethers.getSigners();
+        const signers = await hre.ethers.getSigners();
+        const deployer = signers[0];
 
         console.log("📝 Deployment Details:");
         console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -14,7 +15,7 @@ async function main() {
         console.log(`Chain ID: ${(await hre.ethers.provider.getNetwork()).chainId}\n`);
 
         // Define payees and shares
-        const payees = [payee1.address, payee2.address, payee3.address];
+        const payees = [signers[1].address, signers[2].address, signers[3].address];
         const shares = [50, 30, 20];
 
         console.log("👥 Payee Configuration:");
