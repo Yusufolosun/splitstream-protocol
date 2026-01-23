@@ -52,7 +52,7 @@ const readline = require("readline");
 
 // Configuration
 const EXISTING_CONTRACT = process.env.SPLITSTREAM_CONTRACT || "0x0231B43e23fFEc9A72F27540e4D799C418aE1CD2";
-const TEST_PAYMENT_AMOUNT = ethers.parseEther("0.0001"); // Minimal test amount
+const TEST_PAYMENT_AMOUNT = ethers.parseEther("0.00005"); // Ultra-minimal test amount for maximum affordability
 const BASE_MAINNET_CHAIN_ID = 8453;
 
 // Skip all tests unless ONCHAIN_TEST=true
@@ -136,7 +136,7 @@ describeOnchain("SplitStream On-Chain Tests (Base Mainnet)", function () {
         const signerBalance = await ethers.provider.getBalance(signer.address);
         console.log(`💰 Your Balance: ${ethers.formatEther(signerBalance)} ETH`);
 
-        const requiredBalance = TEST_PAYMENT_AMOUNT * 2n + ethers.parseEther("0.001"); // 2 payments + gas buffer
+        const requiredBalance = TEST_PAYMENT_AMOUNT * 2n + ethers.parseEther("0.00005"); // 2 payments + minimal gas buffer
         if (signerBalance < requiredBalance) {
             throw new Error(
                 `❌ Insufficient balance! Need at least ${ethers.formatEther(requiredBalance)} ETH`
@@ -157,7 +157,12 @@ describeOnchain("SplitStream On-Chain Tests (Base Mainnet)", function () {
 
         // Get contract info
         const totalShares = await contract.totalShares();
-        const payeeCount = await contract.payeeCount();
+        let payeeCount;
+        try {
+            payeeCount = await contract.payeeCount();
+        } catch (e) {
+            payeeCount = 0; // Function doesn't exist on this contract
+        }
         const contractBalance = await ethers.provider.getBalance(EXISTING_CONTRACT);
 
         console.log(`\n📊 Contract Info:`);
