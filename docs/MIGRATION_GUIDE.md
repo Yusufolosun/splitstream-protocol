@@ -1,722 +1,733 @@
 # SplitStream Migration Guide
 
-**Version:** 1.0.0  
-**Last Updated:** 2026-01-22
+This guide provides comprehensive instructions for migrating between SplitStream contract versions, handling issues, and managing various upgrade scenarios.
+
+## Table of Contents
+
+- [When to Migrate](#when-to-migrate)
+- [Migration Strategies](#migration-strategies)
+- [Step-by-Step Migration Process](#step-by-step-migration-process)
+- [Common Migration Scenarios](#common-migration-scenarios)
+- [Data Preservation](#data-preservation)
+- [Rollback Procedures](#rollback-procedures)
+- [Testing Migration](#testing-migration)
+- [Emergency Procedures](#emergency-procedures)
 
 ---
 
-## 📋 Table of Contents
+## When to Migrate
 
-1. [When to Migrate](#1-when-to-migrate)
-2. [Migration Strategies](#2-migration-strategies)
-3. [Step-by-Step Migration Process](#3-step-by-step-migration-process)
-4. [Common Migration Scenarios](#4-common-migration-scenarios)
-5. [Data Preservation](#5-data-preservation)
-6. [Rollback Procedures](#6-rollback-procedures)
-7. [Testing Migration](#7-testing-migration)
-8. [Scripts & Automation](#8-scripts--automation)
+### 1. Active Contract with Updated Share Requirements
 
----
+**Scenario**: Your contract has accumulated funds, but payee shares need to be updated.
 
-## 1. When to Migrate
+**Indicators**:
+- New team members join requiring payment allocation
+- Existing payees need share adjustments
+- Contract balance > 0 and ongoing payments expected
 
-### Scenarios Requiring Migration
-
-#### ✅ **Business Requirement Changes**
-
-**When:**
-- Need to add or remove payees
-- Share distribution needs updating
-- Business partnership terms change
-
-**Example:**
-```
-Current: Alice (50%), Bob (50%)
-New: Alice (40%), Bob (40%), Charlie (20%)
-```
-
-**Action Required:** Deploy new contract with updated payees and shares
+**Migration Required**: ✅ Yes - Deploy new contract with updated shares
 
 ---
 
-#### ✅ **Bug Discovery (Hypothetical)**
+### 2. Bug Discovery (Hypothetical)
 
-**When:**
-- Critical vulnerability discovered (unlikely with current implementation)
-- Logic error affecting fund distribution
-- Security audit recommends changes
+**Scenario**: A vulnerability or bug is discovered in the contract logic.
 
-**Severity Levels:**
+**Indicators**:
+- Security audit reveals issues
+- Unexpected behavior in payment distribution
+- Logic errors in share calculations
 
-| Severity | Action | Timeline |
-|----------|--------|----------|
-| **Critical** | Emergency migration immediately | < 24 hours |
-| **High** | Planned migration within 1 week | 1-7 days |
-| **Medium** | Scheduled migration next cycle | 1-4 weeks |
-| **Low** | Optional upgrade on convenience | Flexible |
+**Migration Required**: ✅ Yes - Immediate migration to patched contract
 
-> **Note:** Current SplitStream implementation has passed security audit with no critical issues.
+> [!CAUTION]
+> If a critical vulnerability is discovered, pause all payments immediately and follow emergency migration procedures.
 
 ---
 
-#### ✅ **New Features Needed**
+### 3. New Features Needed
 
-**When:**
-- Need pause functionality
-- Want to add access controls
-- Require minimum payment thresholds
-- Need upgradeable pattern
+**Scenario**: Business requirements change requiring new functionality.
 
-**Example Enhancements:**
-```solidity
-// V2 Features
-- Minimum payment threshold (prevent dust attacks)
-- Emergency pause by multisig
-- Dynamic share adjustment (with governance)
-- Multiple token support (not just ETH)
-```
+**Examples**:
+- Adding admin capabilities for share adjustment
+- Implementing payment scheduling
+- Adding multi-token support (beyond ETH)
+- Implementing governance features
+
+**Migration Required**: ✅ Yes - Deploy enhanced contract version
 
 ---
 
-#### ✅ **Regulatory Requirements**
+### 4. Regulatory Requirements
 
-**When:**
-- Compliance requirements change
-- KYC/AML integration needed
-- Tax reporting automation required
-- Geographic restrictions imposed
+**Scenario**: Legal or compliance requirements necessitate contract changes.
 
-**Action:** Deploy contract with compliance features
+**Examples**:
+- KYC/AML integration requirements
+- Tax reporting enhancements
+- Geographic restrictions
+- Compliance with new blockchain regulations
 
----
-
-#### ⚠️ **Network Migration**
-
-**When:**
-- Moving from testnet to mainnet
-- Switching L2 networks (e.g., Base to Optimism)
-- Network deprecation
-
-**Important:** Cannot migrate same contract across networks - must deploy new instance
+**Migration Required**: ✅ Yes - Deploy compliant contract version
 
 ---
 
-## 2. Migration Strategies
+## Migration Strategies
 
-### Strategy A: Clean Cut Migration (Recommended)
+### Strategy 1: Complete Migration (Recommended)
 
-**Use When:**
-- No ongoing payment streams
-- Can coordinate all parties
-- Want clean break
+**Best For**: Clean breaks, major upgrades, security issues
 
-**Process:**
-1. Announce migration date
-2. Release all pending payments
-3. Deploy new contract
-4. Update all integrations
-5. Resume operations
-
-**Advantages:**
-- ✅ Clean separation
-- ✅ Simple accounting
-- ✅ Clear audit trail
-
-**Disadvantages:**
-- ⚠️ Requires coordination
-- ⚠️ Temporary service interruption
-
----
-
-### Strategy B: Gradual Migration
-
-**Use When:**
-- Continuous payment flow
-- Large number of integrations
-- Risk-averse approach needed
-
-**Process:**
+**Process**:
 1. Deploy new contract
-2. Redirect new payments to new contract
-3. Allow old contract to drain naturally
-4. Eventually release remaining funds
+2. Release all pending payments from old contract
+3. Transfer remaining balance to new contract
+4. Update all integration points
 5. Deprecate old contract
 
-**Advantages:**
-- ✅ No service interruption
-- ✅ Lower risk
-- ✅ Easier coordination
+**Pros**:
+- Clean separation of concerns
+- No confusion about active contract
+- Simple to verify completion
 
-**Disadvantages:**
-- ⚠️ More complex accounting
-- ⚠️ Maintain two contracts temporarily
-- ⚠️ Longer transition period
-
----
-
-### Strategy C: Emergency Migration
-
-**Use When:**
-- Critical bug discovered
-- Security threat imminent
-- Immediate action required
-
-**Process:**
-1. Deploy new contract immediately
-2. Release ALL funds to payees from old contract
-3. Payees manually send to new contract (if needed)
-4. Update all integrations ASAP
-5. Blacklist old contract address
-
-**Advantages:**
-- ✅ Fast response
-- ✅ Minimizes risk exposure
-
-**Disadvantages:**
-- ⚠️ Chaotic
-- ⚠️ May lose some funds in transition
-- ⚠️ Requires emergency communication
+**Cons**:
+- Requires coordination
+- Potential downtime
+- All integrations must update simultaneously
 
 ---
 
-## 3. Step-by-Step Migration Process
+### Strategy 2: Gradual Migration with Transition Period
 
-### Phase 1: Pre-Migration Planning
+**Best For**: Large ecosystems, multiple integrations, non-urgent upgrades
 
-#### 📋 Pre-Migration Checklist
+**Process**:
+1. Deploy new contract alongside old contract
+2. Announce transition period (e.g., 30 days)
+3. Gradually move payment sources to new contract
+4. Allow payees to claim from both contracts
+5. After transition period, sunset old contract
 
-- [ ] **Identify reason for migration**
-  - Document what's changing and why
-  
-- [ ] **Define new contract parameters**
-  - [ ] List all payees (addresses)
-  - [ ] Define share distribution
-  - [ ] Sum shares to verify total
-  
-- [ ] **Estimate remaining funds in old contract**
-  ```bash
-  CONTRACT_ADDRESS=0xOLD_ADDRESS npx hardhat run scripts/checkBalance.js --network base
-  ```
-  
-- [ ] **Notify all stakeholders**
-  - Payees
-  - Integration partners
-  - Frontend users
-  - Monitoring systems
-  
-- [ ] **Prepare migration scripts**
-  - Test on testnet
-  - Verify gas estimates
-  
-- [ ] **Schedule maintenance window**
-  - Low-traffic period
-  - Coordinate with all parties
-  
-- [ ] **Backup all data**
-  - Export transaction history
-  - Save event logs
-  - Document current state
+**Pros**:
+- Minimal disruption
+- Time for integrations to update
+- Reduced coordination overhead
+
+**Cons**:
+- Funds split across two contracts
+- Complex accounting during transition
+- Extended timeline
 
 ---
 
-### Phase 2: Old Contract Closure
+### Strategy 3: Emergency Migration
 
-#### Step 1: Export Current State
+**Best For**: Critical vulnerabilities, immediate threats
 
-```javascript
-// scripts/exportState.js
-const hre = require("hardhat");
-const fs = require("fs");
+**Process**:
+1. **Immediately** pause all payment inputs
+2. Deploy audited fix/new contract
+3. Release all funds from vulnerable contract
+4. Transfer to secure holding address or new contract
+5. Communicate to all stakeholders
+6. Resume operations on new contract
 
-async function main() {
-    const contractAddress = process.env.OLD_CONTRACT_ADDRESS;
-    const SplitStream = await hre.ethers.getContractFactory("SplitStream");
-    const contract = SplitStream.attach(contractAddress);
-    
-    // Get all payees
-    const payees = [];
-    let index = 0;
-    try {
-        while (true) {
-            payees.push(await contract.payee(index++));
-        }
-    } catch {}
-    
-    // Export state
-    const state = {
-        contractAddress,
-        exportDate: new Date().toISOString(),
-        totalShares: (await contract.totalShares()).toString(),
-        totalReleased: hre.ethers.formatEther(await contract.totalReleased()),
-        balance: hre.ethers.formatEther(await hre.ethers.provider.getBalance(contractAddress)),
-        payees: []
-    };
-    
-    for (const payee of payees) {
-        state.payees.push({
-            address: payee,
-            shares: (await contract.shares(payee)).toString(),
-            released: hre.ethers.formatEther(await contract.released(payee))
-        });
-    }
-    
-    // Save to file
-    fs.writeFileSync(
-        `migration_state_${Date.now()}.json`,
-        JSON.stringify(state, null, 2)
-    );
-    
-    console.log("✅ State exported successfully");
-    console.log(JSON.stringify(state, null, 2));
-}
+**Pros**:
+- Protects funds immediately
+- Minimizes exposure window
 
-main().catch(console.error);
-```
+**Cons**:
+- Rushed process increases risk
+- May require manual intervention
+- Potential for confusion
 
-**Run:**
+---
+
+## Step-by-Step Migration Process
+
+### Phase 1: Pre-Migration Checklist
+
+#### 1.1 Assessment
+
 ```bash
-OLD_CONTRACT_ADDRESS=0x... npx hardhat run scripts/exportState.js --network base
+# Check current contract status
+npx hardhat run scripts/checkBalance.js --network base
+
+# Export current state
+npx hardhat run scripts/exportContractState.js --network base > migration-snapshot.json
 ```
 
----
+**Verify**:
+- [ ] Current contract balance
+- [ ] Total shares distribution
+- [ ] Pending payments per payee
+- [ ] Recent transaction history
+- [ ] All payee addresses are known and accessible
 
-#### Step 2: Release All Pending Payments
+#### 1.2 Communication Plan
 
-```javascript
-// scripts/releaseAll.js
-const hre = require("hardhat");
+- [ ] Notify all payees of migration timeline
+- [ ] Document reason for migration
+- [ ] Share new contract address (after deployment)
+- [ ] Provide claim instructions
+- [ ] Set deadline for claiming from old contract
 
-async function main() {
-    const contractAddress = process.env.CONTRACT_ADDRESS;
-    const SplitStream = await hre.ethers.getContractFactory("SplitStream");
-    const contract = SplitStream.attach(contractAddress);
-    
-    // Get all payees
-    const payees = [];
-    let index = 0;
-    try {
-        while (true) {
-            payees.push(await contract.payee(index++));
-        }
-    } catch {}
-    
-    console.log(`Found ${payees.length} payees`);
-    
-    // Release for each payee
-    for (const payee of payees) {
-        try {
-            const tx = await contract.release(payee);
-            console.log(`✅ Released payment to ${payee}: ${tx.hash}`);
-            await tx.wait();
-        } catch (error) {
-            console.log(`⚠️  No payment due for ${payee} or already released`);
-        }
-    }
-    
-    // Verify final balance
-    const finalBalance = await hre.ethers.provider.getBalance(contractAddress);
-    console.log(`\nFinal contract balance: ${hre.ethers.formatEther(finalBalance)} ETH`);
-    
-    if (finalBalance > 0n) {
-        console.log("⚠️  Warning: Contract still has balance (likely dust from rounding)");
-    }
-}
+#### 1.3 Preparation
 
-main().catch(console.error);
-```
-
-**Run:**
 ```bash
-CONTRACT_ADDRESS=0xOLD_ADDRESS npx hardhat run scripts/releaseAll.js --network base
+# Prepare new contract configuration
+cat > migration-config.json << EOF
+{
+  "newPayees": [
+    {"address": "0x123...", "shares": 40},
+    {"address": "0x456...", "shares": 30},
+    {"address": "0x789...", "shares": 30}
+  ],
+  "oldContractAddress": "0xOLD_CONTRACT_ADDRESS",
+  "migrationDate": "2026-02-15T00:00:00Z"
+}
+EOF
 ```
 
 ---
 
-### Phase 3: New Contract Deployment
+### Phase 2: Deployment of New Contract
 
-#### Step 3: Deploy New Contract
+#### 2.1 Test Deployment
 
-**Prepare deployment parameters:**
+```bash
+# Deploy to testnet first
+npx hardhat run scripts/deploy.js --network base-sepolia
+
+# Verify deployment
+npx hardhat verify --network base-sepolia DEPLOYED_ADDRESS \
+  '["0x123...", "0x456..."]' \
+  '[40, 60]'
+```
+
+#### 2.2 Production Deployment
+
+```bash
+# Deploy to mainnet
+npx hardhat run scripts/deploy.js --network base
+
+# Verify on Basescan
+npx hardhat verify --network base NEW_CONTRACT_ADDRESS \
+  '["0x123...", "0x456...", "0x789..."]' \
+  '[40, 30, 30]'
+```
+
+**Save deployment details**:
+```bash
+echo "NEW_CONTRACT_ADDRESS=0xNEW_ADDRESS" >> .env
+echo "MIGRATION_BLOCK=$(cast block-number --rpc-url $BASE_RPC_URL)" >> .env
+echo "MIGRATION_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> .env
+```
+
+---
+
+### Phase 3: Fund Transfer Procedures
+
+#### 3.1 Release All Pending Payments
+
+Create `scripts/releaseAll.js`:
 
 ```javascript
-// scripts/migrateToNewContract.js
 const hre = require("hardhat");
 
 async function main() {
-    console.log("🚀 Deploying new SplitStream contract...\n");
+  const oldContractAddress = process.env.OLD_CONTRACT_ADDRESS;
+  const SplitStream = await hre.ethers.getContractFactory("SplitStream");
+  const contract = SplitStream.attach(oldContractAddress);
+  
+  // Get all payees
+  const payeeCount = await contract.payeeCount();
+  console.log(`Found ${payeeCount} payees`);
+  
+  for (let i = 0; i < payeeCount; i++) {
+    const payeeAddress = await contract.payee(i);
+    const pending = await contract.releasable(payeeAddress);
     
-    // NEW CONTRACT PARAMETERS
-    const newPayees = [
-        "0xAddress1...",  // Alice
-        "0xAddress2...",  // Bob
-        "0xAddress3..."   // Charlie (new)
-    ];
-    
-    const newShares = [
-        40,  // Alice: 40%
-        40,  // Bob: 40%
-        20   // Charlie: 20%
-    ];
-    
-    // Validate
-    console.log("Payees and Shares:");
-    for (let i = 0; i < newPayees.length; i++) {
-        console.log(`  ${newPayees[i]}: ${newShares[i]} shares`);
+    if (pending > 0) {
+      console.log(`Releasing ${hre.ethers.formatEther(pending)} ETH to ${payeeAddress}...`);
+      const tx = await contract.release(payeeAddress);
+      await tx.wait();
+      console.log(`✓ Released in tx: ${tx.hash}`);
+    } else {
+      console.log(`⊘ No pending payment for ${payeeAddress}`);
     }
-    
-    const totalShares = newShares.reduce((a, b) => a + b, 0);
-    console.log(`\nTotal shares: ${totalShares}\n`);
-    
-    // Deploy
-    const SplitStream = await hre.ethers.getContractFactory("SplitStream");
-    const contract = await SplitStream.deploy(newPayees, newShares);
-    await contract.waitForDeployment();
-    
-    const address = contract.target || contract.address;
-    console.log(`✅ New contract deployed at: ${address}`);
-    console.log(`   Network: ${hre.network.name}`);
-    console.log(`   Chain ID: ${(await hre.ethers.provider.getNetwork()).chainId}`);
-    
-    // Save deployment info
-    const deploymentInfo = {
-        address,
-        network: hre.network.name,
-        deployedAt: new Date().toISOString(),
-        payees: newPayees,
-        shares: newShares,
-        deployer: (await hre.ethers.getSigners())[0].address
-    };
-    
-    require('fs').writeFileSync(
-        'deployment_new.json',
-        JSON.stringify(deploymentInfo, null, 2)
-    );
-    
-    console.log("\n📝 Deployment info saved to deployment_new.json");
+  }
+  
+  console.log("\n✅ All payments released");
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
 ```
 
-**Run:**
+**Execute**:
 ```bash
-npx hardhat run scripts/migrateToNewContract.js --network base
+OLD_CONTRACT_ADDRESS=0xOLD_ADDRESS npx hardhat run scripts/releaseAll.js --network base
 ```
 
----
+#### 3.2 Transfer Remaining Balance
 
-#### Step 4: Verify New Contract
+If there's a remaining balance (future payments), you have two options:
 
+**Option A: Manual Transfer**
 ```bash
-# Check new contract status
-CONTRACT_ADDRESS=0xNEW_ADDRESS npx hardhat run scripts/checkBalance.js --network base
+# Send remaining balance to new contract
+cast send $OLD_CONTRACT_ADDRESS \
+  --value $(cast balance $OLD_CONTRACT_ADDRESS) \
+  --rpc-url $BASE_RPC_URL \
+  --private-key $PRIVATE_KEY
 ```
 
-**Verification Checklist:**
-- [ ] All payees are correct
-- [ ] All shares are correct
-- [ ] Total shares sum is expected
-- [ ] Contract balance is 0 (initially)
-- [ ] No pending payments (initially)
-
----
-
-### Phase 4: Integration Updates
-
-#### Step 5: Update Environment Variables
-
-```bash
-# .env
-OLD_CONTRACT_ADDRESS=0x...  # Keep for reference
-CONTRACT_ADDRESS=0xNEW_ADDRESS...  # Update to new address
-```
-
----
-
-#### Step 6: Update Frontend/Integration
+**Option B: Create Transfer Script**
 
 ```javascript
-// Before
-const contractAddress = "0xOLD_ADDRESS";
+// scripts/transferBalance.js
+const hre = require("hardhat");
 
-// After
-const contractAddress = "0xNEW_ADDRESS";
+async function main() {
+  const [signer] = await hre.ethers.getSigners();
+  const oldAddress = process.env.OLD_CONTRACT_ADDRESS;
+  const newAddress = process.env.NEW_CONTRACT_ADDRESS;
+  
+  const balance = await hre.ethers.provider.getBalance(oldAddress);
+  console.log(`Old contract balance: ${hre.ethers.formatEther(balance)} ETH`);
+  
+  if (balance > 0) {
+    console.log(`Transferring to new contract at ${newAddress}...`);
+    const tx = await signer.sendTransaction({
+      to: newAddress,
+      value: balance,
+      from: oldAddress
+    });
+    await tx.wait();
+    console.log(`✅ Transfer complete: ${tx.hash}`);
+  } else {
+    console.log("⊘ No balance to transfer");
+  }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
 ```
 
-**Update Everywhere:**
-- Frontend configuration
-- Backend services
-- Monitoring scripts
-- Documentation
-- Team wikis
-- Customer-facing docs
+---
+
+### Phase 4: Verification Steps
+
+#### 4.1 Contract Verification Checklist
+
+```bash
+# Create verification script
+cat > scripts/verifyMigration.js << 'EOF'
+const hre = require("hardhat");
+const chalk = require("chalk");
+
+async function main() {
+  const oldAddress = process.env.OLD_CONTRACT_ADDRESS;
+  const newAddress = process.env.NEW_CONTRACT_ADDRESS;
+  
+  const SplitStream = await hre.ethers.getContractFactory("SplitStream");
+  const oldContract = SplitStream.attach(oldAddress);
+  const newContract = SplitStream.attach(newAddress);
+  
+  console.log(chalk.bold("\n🔍 Migration Verification Report\n"));
+  
+  // Check old contract
+  const oldBalance = await hre.ethers.provider.getBalance(oldAddress);
+  console.log(chalk.yellow("Old Contract:"));
+  console.log(`  Address: ${oldAddress}`);
+  console.log(`  Balance: ${hre.ethers.formatEther(oldBalance)} ETH`);
+  
+  if (oldBalance > hre.ethers.parseEther("0.001")) {
+    console.log(chalk.red("  ⚠️  WARNING: Old contract still has significant balance!"));
+  } else {
+    console.log(chalk.green("  ✓ Old contract properly drained"));
+  }
+  
+  // Check new contract
+  const newBalance = await hre.ethers.provider.getBalance(newAddress);
+  const newPayeeCount = await newContract.payeeCount();
+  const newTotalShares = await newContract.totalShares();
+  
+  console.log(chalk.green("\nNew Contract:"));
+  console.log(`  Address: ${newAddress}`);
+  console.log(`  Balance: ${hre.ethers.formatEther(newBalance)} ETH`);
+  console.log(`  Payees: ${newPayeeCount}`);
+  console.log(`  Total Shares: ${newTotalShares}`);
+  
+  // Verify payees
+  console.log(chalk.blue("\nPayee Configuration:"));
+  for (let i = 0; i < newPayeeCount; i++) {
+    const payeeAddress = await newContract.payee(i);
+    const shares = await newContract.shares(payeeAddress);
+    const releasable = await newContract.releasable(payeeAddress);
+    
+    console.log(`  ${i + 1}. ${payeeAddress}`);
+    console.log(`     Shares: ${shares} (${(shares * 100n / newTotalShares)}%)`);
+    console.log(`     Releasable: ${hre.ethers.formatEther(releasable)} ETH`);
+  }
+  
+  console.log(chalk.bold.green("\n✅ Migration verification complete\n"));
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+EOF
+```
+
+**Run verification**:
+```bash
+npx hardhat run scripts/verifyMigration.js --network base
+```
+
+#### 4.2 Test New Contract
+
+```bash
+# Send small test payment
+cast send $NEW_CONTRACT_ADDRESS \
+  --value 0.01ether \
+  --rpc-url $BASE_RPC_URL \
+  --private-key $PRIVATE_KEY
+
+# Check distribution
+npx hardhat run scripts/checkBalance.js --network base
+```
 
 ---
 
 ### Phase 5: Post-Migration Validation
 
-#### Step 7: Send Test Transaction
+#### 5.1 Update Documentation
 
-```bash
-# Send small test amount
-npx hardhat run scripts/sendTestPayment.js --network base
-```
+- [ ] Update README.md with new contract address
+- [ ] Update deployment documentation
+- [ ] Archive old contract address with deprecation notice
+- [ ] Update integration documentation
+
+#### 5.2 Update Integrations
 
 ```javascript
-// scripts/sendTestPayment.js
+// Update frontend configuration
+// config/contracts.js
+module.exports = {
+  SPLITSTREAM_ADDRESS: "0xNEW_CONTRACT_ADDRESS", // Updated
+  DEPRECATED_ADDRESSES: [
+    "0xOLD_CONTRACT_ADDRESS" // For reference only
+  ],
+  MIGRATION_DATE: "2026-02-15",
+  NETWORK: "base"
+};
+```
+
+#### 5.3 Monitor New Contract
+
+```bash
+# Start monitoring
+npx hardhat run scripts/monitor.js --network base
+
+# Watch for events
+# - PaymentReceived events
+# - PaymentReleased events
+# - Verify amounts match expected distribution
+```
+
+---
+
+## Common Migration Scenarios
+
+### Scenario 1: Adding New Payees
+
+**Situation**: New team member joins, needs to be added to payment distribution.
+
+#### Impact Analysis
+- ✅ **CAN** add by deploying new contract
+- ❌ **CANNOT** add to existing immutable contract
+- ⚠️ Existing pending payments must be settled first
+
+#### Migration Process
+
+```bash
+# 1. Export current configuration
+npx hardhat run scripts/exportConfig.js --network base > old-config.json
+
+# 2. Create new configuration
+cat > new-config.json << EOF
+{
+  "payees": [
+    {"address": "0xOLD_PAYEE_1", "shares": 30},
+    {"address": "0xOLD_PAYEE_2", "shares": 30},
+    {"address": "0xNEW_PAYEE", "shares": 40}
+  ]
+}
+EOF
+
+# 3. Release all pending payments from old contract
+npx hardhat run scripts/releaseAll.js --network base
+
+# 4. Deploy new contract with updated payees
+npx hardhat run scripts/deployWithConfig.js --network base --config new-config.json
+
+# 5. Verify new configuration
+npx hardhat run scripts/verifyMigration.js --network base
+```
+
+#### Post-Migration
+
+```bash
+# Notify all payees
+node scripts/notifyPayees.js \
+  --old-contract $OLD_CONTRACT_ADDRESS \
+  --new-contract $NEW_CONTRACT_ADDRESS \
+  --message "New team member added. Please update your records."
+```
+
+---
+
+### Scenario 2: Removing Payees
+
+**Situation**: Team member leaves, should no longer receive payments.
+
+> [!IMPORTANT]
+> Ensure departing payee receives all pending payments before migration.
+
+#### Migration Process
+
+```javascript
+// scripts/removePayee.js
 const hre = require("hardhat");
 
 async function main() {
-    const contractAddress = process.env.CONTRACT_ADDRESS;
-    const [signer] = await hre.ethers.getSigners();
-    
-    const tx = await signer.sendTransaction({
-        to: contractAddress,
-        value: hre.ethers.parseEther("0.001") // 0.001 ETH test
-    });
-    
-    console.log(`✅ Test payment sent: ${tx.hash}`);
+  const oldAddress = process.env.OLD_CONTRACT_ADDRESS;
+  const payeeToRemove = process.env.PAYEE_TO_REMOVE;
+  
+  const SplitStream = await hre.ethers.getContractFactory("SplitStream");
+  const oldContract = SplitStream.attach(oldAddress);
+  
+  // 1. Release final payment to departing payee
+  const pending = await oldContract.releasable(payeeToRemove);
+  console.log(`Final payment: ${hre.ethers.formatEther(pending)} ETH`);
+  
+  if (pending > 0) {
+    const tx = await oldContract.release(payeeToRemove);
     await tx.wait();
-    
-    // Verify
-    const balance = await hre.ethers.provider.getBalance(contractAddress);
-    console.log(`Contract balance: ${hre.ethers.formatEther(balance)} ETH`);
+    console.log(`✓ Final payment released: ${tx.hash}`);
+  }
+  
+  // 2. Get remaining payees
+  const payeeCount = await oldContract.payeeCount();
+  const newPayees = [];
+  const newShares = [];
+  
+  for (let i = 0; i < payeeCount; i++) {
+    const address = await oldContract.payee(i);
+    if (address.toLowerCase() !== payeeToRemove.toLowerCase()) {
+      const shares = await oldContract.shares(address);
+      newPayees.push(address);
+      newShares.push(shares);
+    }
+  }
+  
+  console.log("\nNew configuration:");
+  console.log("Payees:", newPayees);
+  console.log("Shares:", newShares);
+  
+  // 3. Deploy new contract (requires manual execution)
+  console.log("\nNext step: Deploy new contract with above configuration");
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
+**Execute**:
+```bash
+PAYEE_TO_REMOVE=0xPAYEE_ADDRESS npx hardhat run scripts/removePayee.js --network base
 ```
 
 ---
 
-#### Step 8: Test Release Function
+### Scenario 3: Changing Share Distribution
+
+**Situation**: Business agreement changes, shares need reallocation.
+
+#### Example: 50/50 → 60/40 Split
+
+```javascript
+// scripts/rebalanceShares.js
+const hre = require("hardhat");
+
+async function main() {
+  const oldAddress = process.env.OLD_CONTRACT_ADDRESS;
+  const SplitStream = await hre.ethers.getContractFactory("SplitStream");
+  const oldContract = SplitStream.attach(oldAddress);
+  
+  // Current configuration
+  const currentConfig = [
+    { address: "0xPayee1", shares: 50 },
+    { address: "0xPayee2", shares: 50 }
+  ];
+  
+  // New configuration
+  const newConfig = [
+    { address: "0xPayee1", shares: 60 },
+    { address: "0xPayee2", shares: 40 }
+  ];
+  
+  console.log("Current distribution:", currentConfig);
+  console.log("New distribution:", newConfig);
+  
+  // Release all pending under old distribution
+  console.log("\nReleasing pending payments under old distribution...");
+  for (const payee of currentConfig) {
+    const pending = await oldContract.releasable(payee.address);
+    if (pending > 0) {
+      const tx = await oldContract.release(payee.address);
+      await tx.wait();
+      console.log(`✓ Released ${hre.ethers.formatEther(pending)} ETH to ${payee.address}`);
+    }
+  }
+  
+  // Deploy new contract
+  console.log("\nReady to deploy new contract with updated shares");
+  console.log("Payees:", newConfig.map(p => p.address));
+  console.log("Shares:", newConfig.map(p => p.shares));
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
+---
+
+### Scenario 4: Upgrading Contract Version
+
+**Situation**: New SplitStream version released with enhanced features.
+
+#### Version Upgrade Checklist
 
 ```bash
-# Pick one payee to test withdrawal
-PAYEE_ADDRESS=0x... npx hardhat run scripts/releasePayment.js --network base
-```
+# 1. Review changelog
+cat CHANGELOG.md | grep -A 20 "Version 2.0.0"
 
-**Validation:**
-- [ ] Payment received event emitted
-- [ ] Payment released event emitted
-- [ ] Correct amount withdrawn
-- [ ] Balance updated correctly
+# 2. Test new version on testnet
+git checkout v2.0.0
+npm install
+npx hardhat test
+npx hardhat run scripts/deploy.js --network base-sepolia
+
+# 3. Audit new contract
+# - Run security tests
+npx hardhat test --grep "Security"
+# - External audit if major changes
+# - Compare gas costs
+npx hardhat test --gas-reporter
+
+# 4. Plan migration window
+# - Choose low-activity period
+# - Notify stakeholders 48h advance
+# - Prepare rollback plan
+
+# 5. Execute migration (as per standard process)
+npx hardhat run scripts/migrate.js --network base
+
+# 6. Validate
+npx hardhat run scripts/verifyMigration.js --network base
+```
 
 ---
 
-#### Step 9: Monitor Events
+### Scenario 5: Moving to Different Network
 
+**Situation**: Migrating from Base Sepolia (testnet) to Base Mainnet, or Base to another L2.
+
+#### Cross-Network Migration
+
+```javascript
+// scripts/crossNetworkMigration.js
+const hre = require("hardhat");
+
+async function main() {
+  const sourceNetwork = "base-sepolia";
+  const targetNetwork = "base";
+  
+  console.log(`Migrating from ${sourceNetwork} to ${targetNetwork}`);
+  
+  // 1. Export configuration from source
+  const sourceContract = await hre.ethers.getContractAt(
+    "SplitStream",
+    process.env.SOURCE_CONTRACT_ADDRESS
+  );
+  
+  const payeeCount = await sourceContract.payeeCount();
+  const payees = [];
+  const shares = [];
+  
+  for (let i = 0; i < payeeCount; i++) {
+    const payeeAddress = await sourceContract.payee(i);
+    const payeeShares = await sourceContract.shares(payeeAddress);
+    payees.push(payeeAddress);
+    shares.push(payeeShares);
+  }
+  
+  console.log("Configuration to migrate:");
+  console.log("Payees:", payees);
+  console.log("Shares:", shares);
+  
+  // 2. Deploy to target network
+  console.log(`\nDeploy to ${targetNetwork} with:`);
+  console.log(`npx hardhat run scripts/deploy.js --network ${targetNetwork}`);
+  console.log(`Constructor args: ${JSON.stringify({ payees, shares })}`);
+  
+  // 3. Transfer strategy options
+  console.log("\nTransfer options:");
+  console.log("A. Release all funds on source, payees deposit to target manually");
+  console.log("B. Use bridge to transfer contract balance (if available)");
+  console.log("C. Admin bridge transfer to new contract");
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
+**Execution**:
 ```bash
-# Start monitoring for 5 minutes
-CONTRACT_ADDRESS=0xNEW_ADDRESS npx hardhat run scripts/monitor.js --network base
-```
+# Run on source network
+SOURCE_CONTRACT_ADDRESS=0xSOURCE npx hardhat run scripts/crossNetworkMigration.js --network base-sepolia
 
-**Watch for:**
-- PaymentReceived events
-- PaymentReleased events
-- Any errors or reverts
-
----
-
-### Phase 6: Full Cutover
-
-#### Step 10: Announce Migration Complete
-
-**Communication Template:**
-
-```
-🎉 Migration Complete!
-
-Old Contract: 0xOLD_ADDRESS (deprecated)
-New Contract: 0xNEW_ADDRESS (active)
-
-Changes:
-- Added payee: Charlie (20% share)
-- Updated shares: Alice 40%, Bob 40%, Charlie 20%
-
-Action Required:
-- Update any saved addresses to new contract
-- All payments should now go to: 0xNEW_ADDRESS
-
-Questions? Contact: team@example.com
-```
-
----
-
-#### Step 11: Document Migration
-
-```markdown
-# Migration Record
-
-**Date:** 2026-01-22
-**Reason:** Added new payee
-**Old Contract:** 0xOLD_ADDRESS
-**New Contract:** 0xNEW_ADDRESS
-
-## Changes
-- Added Charlie as payee with 20% share
-- Reduced Alice and Bob to 40% each
-
-## Final State of Old Contract
-- Total Released: 10.5 ETH
-- Final Balance: 0.0001 ETH (dust)
-- All payees withdrawn successfully
-
-## New Contract Status
-- Deployed successfully
-- Test transactions verified
-- Monitoring active
-```
-
----
-
-## 4. Common Migration Scenarios
-
-### Scenario A: Adding a New Payee
-
-**Situation:** Partnership expands, need to add new member
-
-**Before:**
-```javascript
-const payees = [
-    "0xAlice...",
-    "0xBob..."
-];
-const shares = [50, 50]; // 50/50 split
-```
-
-**After:**
-```javascript
-const payees = [
-    "0xAlice...",
-    "0xBob...",
-    "0xCharlie..."  // New member
-];
-const shares = [40, 40, 20]; // 40/40/20 split
-```
-
-**Steps:**
-1. Release all funds from old contract
-2. Deploy new contract with 3 payees
-3. Update all payment sources
-4. Resume operations
-
-**Timeline:** 1-2 hours
-
----
-
-### Scenario B: Removing a Payee
-
-**Situation:** Partner leaves, needs final payout
-
-**Before:**
-```javascript
-const payees = ["0xAlice...", "0xBob...", "0xCharlie..."];
-const shares = [33, 33, 34];
-```
-
-**After:**
-```javascript
-const payees = ["0xAlice...", "0xBob..."];
-const shares = [50, 50];
-```
-
-**Steps:**
-1. Release Charlie's final payment from old contract
-2. Deploy new contract with 2 payees
-3. Update integrations
-4. Charlie confirms receipt
-
-**Important:** Ensure departing payee receives ALL owed funds before migration!
-
----
-
-### Scenario C: Changing Share Distribution
-
-**Situation:** Renegotiated partnership terms
-
-**Before:**
-```javascript
-const shares = [50, 50]; // Equal split
-```
-
-**After:**
-```javascript
-const shares = [70, 30]; // 70/30 split
-```
-
-**Steps:**
-1. Settle all pending payments at OLD ratio
-2. Deploy new contract with NEW ratio
-3. Clearly communicate change date
-4. All NEW payments use new ratio
-
-**Communication Critical:** Document exact cutover timestamp!
-
----
-
-### Scenario D: Network Migration
-
-**Situation:** Moving from Base Goerli (testnet) to Base Mainnet
-
-**Process:**
-```bash
-# 1. Export state from testnet
-OLD_CONTRACT_ADDRESS=0x... npx hardhat run scripts/exportState.js --network base-goerli
-
-# 2. Deploy to mainnet with SAME parameters
+# Deploy to target network
 npx hardhat run scripts/deploy.js --network base
 
-# 3. Verify on mainnet
-CONTRACT_ADDRESS=0x... npx hardhat run scripts/checkBalance.js --network base
-
-# 4. Update all integrations to mainnet
+# Manual verification both networks operational
 ```
 
-**Important:** This is a NEW deployment, not a migration. No funds transfer between networks!
-
 ---
 
-### Scenario E: Upgrading Contract Logic
+## Data Preservation
 
-**Situation:** Want to add ReentrancyGuard or other features
+### Exporting Payment History
 
-**Before:** SplitStream V1 (current)
+Since SplitStream events are emitted on-chain, historical data remains permanently accessible via blockchain explorers and RPC queries.
 
-**After:** SplitStream V2 (with enhancements)
-
-**Migration Process:**
-
-1. **Develop V2 Contract:**
-   ```solidity
-   // contracts/SplitStreamV2.sol
-   import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-   
-   contract SplitStreamV2 is SplitStream, ReentrancyGuard {
-       uint256 public constant MIN_PAYMENT = 0.001 ether;
-       
-       receive() external payable override {
-           require(msg.value >= MIN_PAYMENT, "Payment too small");
-           super.receive();
-       }
-       
-       function release(address payable account) public override nonReentrant {
-           super.release(account);
-       }
-   }
-   ```
-
-2. **Test V2 on testnet**
-3. **Release all funds from V1**
-4. **Deploy V2 to mainnet**
-5. **Update all integrations**
-
----
-
-## 5. Data Preservation
-
-### Export Transaction History
-
-#### Method 1: Export from Events
+#### Create Export Script
 
 ```javascript
 // scripts/exportHistory.js
@@ -724,567 +735,771 @@ const hre = require("hardhat");
 const fs = require("fs");
 
 async function main() {
-    const contractAddress = process.env.CONTRACT_ADDRESS;
-    const SplitStream = await hre.ethers.getContractFactory("SplitStream");
-    const contract = SplitStream.attach(contractAddress);
-    
-    // Get deployment block (you should save this during deployment)
-    const deploymentBlock = process.env.DEPLOYMENT_BLOCK || 0;
-    
-    console.log("📊 Exporting transaction history...\n");
-    
-    // Get PaymentReceived events
-    const receivedFilter = contract.filters.PaymentReceived();
-    const receivedEvents = await contract.queryFilter(receivedFilter, deploymentBlock);
-    
-    // Get PaymentReleased events
-    const releasedFilter = contract.filters.PaymentReleased();
-    const releasedEvents = await contract.queryFilter(releasedFilter, deploymentBlock);
-    
-    // Format history
-    const history = {
-        contractAddress,
-        exportDate: new Date().toISOString(),
-        deploymentBlock,
-        paymentsReceived: [],
-        paymentsReleased: []
-    };
-    
-    for (const event of receivedEvents) {
-        const block = await event.getBlock();
-        history.paymentsReceived.push({
-            blockNumber: event.blockNumber,
-            timestamp: new Date(block.timestamp * 1000).toISOString(),
-            sender: event.args.sender,
-            amount: hre.ethers.formatEther(event.args.amount),
-            txHash: event.transactionHash
-        });
-    }
-    
-    for (const event of releasedEvents) {
-        const block = await event.getBlock();
-        history.paymentsReleased.push({
-            blockNumber: event.blockNumber,
-            timestamp: new Date(block.timestamp * 1000).toISOString(),
-            payee: event.args.payee,
-            amount: hre.ethers.formatEther(event.args.amount),
-            txHash: event.transactionHash
-        });
-    }
-    
-    // Calculate totals
-    const totalReceived = history.paymentsReceived.reduce(
-        (sum, p) => sum + parseFloat(p.amount),
-        0
-    );
-    const totalReleased = history.paymentsReleased.reduce(
-        (sum, p) => sum + parseFloat(p.amount),
-        0
-    );
-    
-    history.summary = {
-        totalPaymentsReceived: history.paymentsReceived.length,
-        totalPaymentsReleased: history.paymentsReleased.length,
-        totalAmountReceived: `${totalReceived.toFixed(6)} ETH`,
-        totalAmountReleased: `${totalReleased.toFixed(6)} ETH`
-    };
-    
-    // Save to file
-    const filename = `history_${contractAddress}_${Date.now()}.json`;
-    fs.writeFileSync(filename, JSON.stringify(history, null, 2));
-    
-    console.log(`✅ History exported to ${filename}`);
-    console.log(`\nSummary:`);
-    console.log(`  Payments Received: ${history.paymentsReceived.length}`);
-    console.log(`  Payments Released: ${history.paymentsReleased.length}`);
-    console.log(`  Total Received: ${totalReceived.toFixed(6)} ETH`);
-    console.log(`  Total Released: ${totalReleased.toFixed(6)} ETH`);
+  const contractAddress = process.env.CONTRACT_ADDRESS;
+  const fromBlock = parseInt(process.env.FROM_BLOCK || "0");
+  const toBlock = process.env.TO_BLOCK || "latest";
+  
+  const SplitStream = await hre.ethers.getContractFactory("SplitStream");
+  const contract = SplitStream.attach(contractAddress);
+  
+  console.log(`Exporting history from block ${fromBlock} to ${toBlock}...`);
+  
+  // Get all PaymentReceived events
+  const receivedFilter = contract.filters.PaymentReceived();
+  const receivedEvents = await contract.queryFilter(receivedFilter, fromBlock, toBlock);
+  
+  // Get all PaymentReleased events
+  const releasedFilter = contract.filters.PaymentReleased();
+  const releasedEvents = await contract.queryFilter(releasedFilter, fromBlock, toBlock);
+  
+  const history = {
+    contractAddress,
+    exportDate: new Date().toISOString(),
+    fromBlock,
+    toBlock,
+    paymentsReceived: [],
+    paymentsReleased: [],
+    summary: {}
+  };
+  
+  // Process received events
+  for (const event of receivedEvents) {
+    const block = await event.getBlock();
+    history.paymentsReceived.push({
+      blockNumber: event.blockNumber,
+      timestamp: block.timestamp,
+      from: event.args.from,
+      amount: event.args.amount.toString(),
+      amountETH: hre.ethers.formatEther(event.args.amount),
+      txHash: event.transactionHash
+    });
+  }
+  
+  // Process released events
+  for (const event of releasedEvents) {
+    const block = await event.getBlock();
+    history.paymentsReleased.push({
+      blockNumber: event.blockNumber,
+      timestamp: block.timestamp,
+      to: event.args.to,
+      amount: event.args.amount.toString(),
+      amountETH: hre.ethers.formatEther(event.args.amount),
+      txHash: event.transactionHash
+    });
+  }
+  
+  // Calculate summary
+  const totalReceived = receivedEvents.reduce(
+    (sum, e) => sum + e.args.amount,
+    0n
+  );
+  const totalReleased = releasedEvents.reduce(
+    (sum, e) => sum + e.args.amount,
+    0n
+  );
+  
+  history.summary = {
+    totalPaymentsReceived: receivedEvents.length,
+    totalPaymentsReleased: releasedEvents.length,
+    totalAmountReceived: totalReceived.toString(),
+    totalAmountReceivedETH: hre.ethers.formatEther(totalReceived),
+    totalAmountReleased: totalReleased.toString(),
+    totalAmountReleasedETH: hre.ethers.formatEther(totalReleased)
+  };
+  
+  // Save to file
+  const filename = `payment-history-${contractAddress}-${Date.now()}.json`;
+  fs.writeFileSync(filename, JSON.stringify(history, null, 2));
+  
+  console.log(`\n✅ Export complete: ${filename}`);
+  console.log(`\nSummary:`);
+  console.log(`  Payments Received: ${history.summary.totalPaymentsReceived}`);
+  console.log(`  Payments Released: ${history.summary.totalPaymentsReleased}`);
+  console.log(`  Total Received: ${history.summary.totalAmountReceivedETH} ETH`);
+  console.log(`  Total Released: ${history.summary.totalAmountReleasedETH} ETH`);
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
 ```
 
-**Usage:**
+**Usage**:
 ```bash
-CONTRACT_ADDRESS=0x... DEPLOYMENT_BLOCK=12345678 npx hardhat run scripts/exportHistory.js --network base
+# Export full history
+CONTRACT_ADDRESS=0xOLD_CONTRACT npx hardhat run scripts/exportHistory.js --network base
+
+# Export specific block range
+FROM_BLOCK=1000000 TO_BLOCK=2000000 CONTRACT_ADDRESS=0xOLD_CONTRACT \
+  npx hardhat run scripts/exportHistory.js --network base
 ```
 
 ---
 
-#### Method 2: Export from Block Explorer
+### Maintaining Audit Trail
 
-1. Visit block explorer (BaseScan)
-2. Go to contract address
-3. Navigate to "Events" tab
-4. Export PaymentReceived events (CSV)
-5. Export PaymentReleased events (CSV)
-6. Save locally for records
-
----
-
-### Maintain Audit Trail
-
-**Create Migration Log:**
+#### Create Migration Record
 
 ```json
 {
-  "migrations": [
-    {
-      "date": "2026-01-22T19:00:00Z",
-      "reason": "Added new payee",
-      "oldContract": "0xOLD_ADDRESS",
-      "newContract": "0xNEW_ADDRESS",
-      "oldPayees": ["0xAlice", "0xBob"],
-      "newPayees": ["0xAlice", "0xBob", "0xCharlie"],
-      "finalOldBalance": "0.0001 ETH",
-      "initiatedBy": "0xDEPLOYER",
-      "approvedBy": ["Alice", "Bob"],
-      "transactionHashes": {
-        "deployment": "0xDEPLOY_TX",
-        "finalReleases": ["0xRELEASE1", "0xRELEASE2"]
-      }
+  "migrationId": "migration-2026-02-15",
+  "timestamp": "2026-02-15T00:00:00Z",
+  "reason": "Adding new team member",
+  "contracts": {
+    "old": {
+      "address": "0xOLD_CONTRACT_ADDRESS",
+      "network": "base",
+      "deployedAt": "2026-01-20T12:00:00Z",
+      "finalBalance": "0.0",
+      "totalReceived": "10.5 ETH",
+      "totalReleased": "10.5 ETH",
+      "payees": [
+        {"address": "0xPayee1", "shares": 50, "totalReleased": "5.25 ETH"},
+        {"address": "0xPayee2", "shares": 50, "totalReleased": "5.25 ETH"}
+      ]
+    },
+    "new": {
+      "address": "0xNEW_CONTRACT_ADDRESS",
+      "network": "base",
+      "deployedAt": "2026-02-15T00:00:00Z",
+      "payees": [
+        {"address": "0xPayee1", "shares": 30},
+        {"address": "0xPayee2", "shares": 30},
+        {"address": "0xPayee3", "shares": 40}
+      ]
     }
+  },
+  "verification": {
+    "testnetDeployment": "0xTESTNET_ADDRESS",
+    "testsDuration": "2 days",
+    "auditPerformed": true,
+    "approvers": ["deployer@example.com", "admin@example.com"]
+  },
+  "artifacts": {
+    "historyExport": "payment-history-OLD_CONTRACT-1738972800.json",
+    "deploymentTx": "0xDEPLOYMENT_TX_HASH",
+    "verificationTx": "0xVERIFICATION_TX_HASH"
+  }
+}
+```
+
+Save this to `migrations/migration-2026-02-15.json`
+
+---
+
+### Off-Chain Record Keeping
+
+#### Database Schema Example
+
+```sql
+-- Migration tracking table
+CREATE TABLE migrations (
+  id SERIAL PRIMARY KEY,
+  migration_date TIMESTAMP NOT NULL,
+  old_contract_address VARCHAR(42) NOT NULL,
+  new_contract_address VARCHAR(42) NOT NULL,
+  network VARCHAR(20) NOT NULL,
+  reason TEXT,
+  status VARCHAR(20) NOT NULL, -- 'planned', 'in-progress', 'completed', 'rolled-back'
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Payment history table (off-chain mirror)
+CREATE TABLE payment_history (
+  id SERIAL PRIMARY KEY,
+  contract_address VARCHAR(42) NOT NULL,
+  event_type VARCHAR(20) NOT NULL, -- 'received' or 'released'
+  from_address VARCHAR(42),
+  to_address VARCHAR(42),
+  amount NUMERIC(78, 0) NOT NULL, -- Wei
+  amount_eth DECIMAL(18, 8),
+  block_number BIGINT NOT NULL,
+  transaction_hash VARCHAR(66) NOT NULL,
+  timestamp TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(transaction_hash, event_type, to_address)
+);
+
+-- Contract configurations
+CREATE TABLE contract_configs (
+  id SERIAL PRIMARY KEY,
+  contract_address VARCHAR(42) NOT NULL UNIQUE,
+  network VARCHAR(20) NOT NULL,
+  payees JSONB NOT NULL,
+  deployed_at TIMESTAMP NOT NULL,
+  deprecated_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+#### Sync Script
+
+```javascript
+// scripts/syncToDatabase.js
+const hre = require("hardhat");
+const { Pool } = require("pg");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+async function main() {
+  const contractAddress = process.env.CONTRACT_ADDRESS;
+  const fromBlock = parseInt(process.env.FROM_BLOCK || "0");
+  
+  const SplitStream = await hre.ethers.getContractFactory("SplitStream");
+  const contract = SplitStream.attach(contractAddress);
+  
+  // Sync PaymentReceived events
+  const receivedFilter = contract.filters.PaymentReceived();
+  const receivedEvents = await contract.queryFilter(receivedFilter, fromBlock);
+  
+  for (const event of receivedEvents) {
+    const block = await event.getBlock();
+    
+    await pool.query(`
+      INSERT INTO payment_history 
+      (contract_address, event_type, from_address, amount, amount_eth, 
+       block_number, transaction_hash, timestamp)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8))
+      ON CONFLICT (transaction_hash, event_type, to_address) DO NOTHING
+    `, [
+      contractAddress,
+      'received',
+      event.args.from,
+      event.args.amount.toString(),
+      parseFloat(hre.ethers.formatEther(event.args.amount)),
+      event.blockNumber,
+      event.transactionHash,
+      block.timestamp
+    ]);
+  }
+  
+  // Sync PaymentReleased events
+  const releasedFilter = contract.filters.PaymentReleased();
+  const releasedEvents = await contract.queryFilter(releasedFilter, fromBlock);
+  
+  for (const event of releasedEvents) {
+    const block = await event.getBlock();
+    
+    await pool.query(`
+      INSERT INTO payment_history 
+      (contract_address, event_type, to_address, amount, amount_eth, 
+       block_number, transaction_hash, timestamp)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, to_timestamp($8))
+      ON CONFLICT (transaction_hash, event_type, to_address) DO NOTHING
+    `, [
+      contractAddress,
+      'released',
+      event.args.to,
+      event.args.amount.toString(),
+      parseFloat(hre.ethers.formatEther(event.args.amount)),
+      event.blockNumber,
+      event.transactionHash,
+      block.timestamp
+    ]);
+  }
+  
+  console.log(`✅ Synced ${receivedEvents.length + releasedEvents.length} events to database`);
+  
+  await pool.end();
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
+---
+
+## Rollback Procedures
+
+### Understanding Rollback Limitations
+
+> [!WARNING]
+> SplitStream contracts are **immutable**. Once deployed, the code cannot be changed. "Rollback" means reverting to a previous contract address and configuration.
+
+#### When Rollback is Possible
+
+✅ **Possible Scenarios**:
+- New contract has a bug discovered before significant funds deposited
+- Configuration error in new contract deployment
+- Failed migration testing
+- Stakeholder disagreement on new terms
+
+❌ **Not Possible**:
+- Cannot undo transactions on deployed contract
+- Cannot recover from true smart contract vulnerability (must migrate forward)
+- Cannot reverse time-based events
+
+---
+
+### Rollback Process
+
+#### Step 1: Assess Situation
+
+```bash
+# Check new contract status
+NEW_CONTRACT_ADDRESS=0xNEW npx hardhat run scripts/checkBalance.js --network base
+
+# Verify old contract still accessible
+OLD_CONTRACT_ADDRESS=0xOLD npx hardhat run scripts/checkBalance.js --network base
+```
+
+**Questions to answer**:
+- How much value is in new contract?
+- Can funds be safely extracted?
+- Is old contract still functional?
+- What integrations have switched?
+
+---
+
+#### Step 2: Extract Funds from New Contract
+
+```javascript
+// scripts/rollback.js
+const hre = require("hardhat");
+
+async function main() {
+  const newAddress = process.env.NEW_CONTRACT_ADDRESS;
+  const oldAddress = process.env.OLD_CONTRACT_ADDRESS;
+  
+  console.log("⚠️  ROLLBACK INITIATED");
+  console.log(`Rolling back from ${newAddress} to ${oldAddress}`);
+  
+  const SplitStream = await hre.ethers.getContractFactory("SplitStream");
+  const newContract = SplitStream.attach(newAddress);
+  
+  // Release all funds from new contract
+  const payeeCount = await newContract.payeeCount();
+  
+  for (let i = 0; i < payeeCount; i++) {
+    const payeeAddress = await newContract.payee(i);
+    const releasable = await newContract.releasable(payeeAddress);
+    
+    if (releasable > 0) {
+      console.log(`Releasing ${hre.ethers.formatEther(releasable)} ETH to ${payeeAddress}...`);
+      const tx = await newContract.release(payeeAddress);
+      await tx.wait();
+      console.log(`✓ Released: ${tx.hash}`);
+    }
+  }
+  
+  const remainingBalance = await hre.ethers.provider.getBalance(newAddress);
+  console.log(`\nRemaining balance in new contract: ${hre.ethers.formatEther(remainingBalance)} ETH`);
+  
+  console.log(`\n✅ Rollback extraction complete`);
+  console.log(`\nNext steps:`);
+  console.log(`1. Update all integrations to use: ${oldAddress}`);
+  console.log(`2. Notify all stakeholders of rollback`);
+  console.log(`3. Document reason for rollback`);
+  console.log(`4. Plan corrective action for next migration`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
+```
+
+**Execute**:
+```bash
+NEW_CONTRACT_ADDRESS=0xNEW OLD_CONTRACT_ADDRESS=0xOLD \
+  npx hardhat run scripts/rollback.js --network base
+```
+
+---
+
+#### Step 3: Revert Integrations
+
+```javascript
+// Update config files
+// config/contracts.js (revert changes)
+module.exports = {
+  SPLITSTREAM_ADDRESS: "0xOLD_CONTRACT_ADDRESS", // Reverted
+  FAILED_MIGRATION: {
+    address: "0xNEW_CONTRACT_ADDRESS",
+    failureDate: "2026-02-16",
+    reason: "Configuration error - incorrect share distribution"
+  },
+  NETWORK: "base"
+};
+```
+
+---
+
+#### Step 4: Document Rollback
+
+```json
+{
+  "rollbackId": "rollback-2026-02-16",
+  "timestamp": "2026-02-16T12:00:00Z",
+  "originalMigration": "migration-2026-02-15",
+  "reason": "Configuration error: shares summed to 110 instead of 100",
+  "impactAnalysis": {
+    "fundsInNewContract": "0.5 ETH",
+    "fundsExtracted": "0.5 ETH",
+    "affectedPayees": 3,
+    "downtime": "2 hours"
+  },
+  "actions": {
+    "fundsReleased": true,
+    "integrationsReverted": true,
+    "stakeholdersNotified": true,
+    "postMortemScheduled": true
+  },
+  "preventiveMeasures": [
+    "Add share validation to deployment script",
+    "Extend testnet validation period to 48h",
+    "Require multi-sig approval for migrations"
   ]
 }
 ```
 
-**Store:**
-- Git repository (version controlled)
-- Secure backup storage
-- Company documentation system
-- Blockchain (as events/transactions)
-
 ---
 
-## 6. Rollback Procedures
+### Emergency Recovery Options
 
-### Understanding Rollback Limitations
-
-> ⚠️ **Critical:** Once a contract is deployed and receives funds, there is NO true "rollback" on blockchain.
-
-**What you CAN do:**
-- Deploy a new contract with old parameters
-- Migrate funds back to original configuration
-- Restore business logic to previous state
-
-**What you CANNOT do:**
-- Undo blockchain transactions
-- Delete deployed contracts
-- Restore historical state magically
-
----
-
-### Pseudo-Rollback: Reverting to Previous Configuration
-
-**Scenario:** Deployed wrong parameters, catch it quickly
-
-**Within 1 hour of deployment:**
+#### Scenario: Critical Bug in New Contract
 
 ```bash
-# 1. Immediately release all funds (if any)
-CONTRACT_ADDRESS=0xNEW_WRONG npx hardhat run scripts/releaseAll.js --network base
+# IMMEDIATE ACTIONS (execute in order)
+# 1. Pause new payment sources
+echo "🚨 EMERGENCY: Stop sending payments to $NEW_CONTRACT_ADDRESS"
 
-# 2. Deploy contract with CORRECT parameters
+# 2. Extract all funds
+npx hardhat run scripts/emergencyExtract.js --network base
+
+# 3. Deploy fixed version
 npx hardhat run scripts/deploy.js --network base
 
-# 3. Update all integrations to CORRECT address
-# Edit .env: CONTRACT_ADDRESS=0xCORRECT_ADDRESS
-
-# 4. Communicate mistake and correction
+# 4. Communicate to all stakeholders
+node scripts/notifyEmergency.js
 ```
 
----
+```javascript
+// scripts/emergencyExtract.js
+const hre = require("hardhat");
 
-### Emergency Recovery
+async function main() {
+  console.log("🚨 EMERGENCY EXTRACTION");
+  
+  const contractAddress = process.env.EMERGENCY_CONTRACT_ADDRESS;
+  const SplitStream = await hre.ethers.getContractFactory("SplitStream");
+  const contract = SplitStream.attach(contractAddress);
+  
+  // Get all funds out ASAP
+  const payeeCount = await contract.payeeCount();
+  const results = [];
+  
+  for (let i = 0; i < payeeCount; i++) {
+    const payee = await contract.payee(i);
+    const releasable = await contract.releasable(payee);
+    
+    if (releasable > 0) {
+      try {
+        const tx = await contract.release(payee, {
+          gasLimit: 500000 // Force high gas to ensure execution
+        });
+        await tx.wait();
+        results.push({ payee, amount: releasable, status: "success", tx: tx.hash });
+      } catch (error) {
+        results.push({ payee, amount: releasable, status: "failed", error: error.message });
+      }
+    }
+  }
+  
+  console.log("\nExtraction results:");
+  console.table(results);
+  
+  const failed = results.filter(r => r.status === "failed");
+  if (failed.length > 0) {
+    console.error("\n⚠️  FAILURES DETECTED - Manual intervention required");
+    console.error(JSON.stringify(failed, null, 2));
+  } else {
+    console.log("\n✅ All funds extracted successfully");
+  }
+}
 
-**Scenario:** Critical bug discovered in new deployment
-
-#### Recovery Plan:
-
-1. **Stop All Inflows** (if possible)
-   - Pause payment integrations
-   - Notify senders
-   - Redirect to safe address
-
-2. **Extract All Funds**
-   ```bash
-   CONTRACT_ADDRESS=0xBUGGY npx hardhat run scripts/releaseAll.js --network base
-   ```
-
-3. **Deploy Safe Contract**
-   - Use previously audited version
-   - Or deploy temporary holding contract
-
-4. **Investigate & Fix**
-   - Identify root cause
-   - Develop patch
-   - Re-audit if necessary
-
-5. **Deploy Fixed Version**
-   - Test extensively on testnet
-   - Deploy to mainnet
-   - Resume operations
+main().catch((error) => {
+  console.error("CRITICAL ERROR:", error);
+  process.exitCode = 1;
+});
+```
 
 ---
 
 ### Fund Safety Guarantees
 
-**The Good News:** ✅
+#### Multi-Signature Safeguard (Optional Enhancement)
 
-SplitStream contract guarantees:
-- Funds can ALWAYS be withdrawn by rightful payees
-- No owner can lock or steal funds
-- No selfdestruct to destroy funds
-- Math ensures all funds are distributable
+For high-value deployments, consider deploying via multi-sig:
 
-**Steps to Guarantee Safety:**
+```javascript
+// Deploy via Gnosis Safe or similar
+// This allows migration rollback with consensus
 
-1. **Verify Payee Addresses** before deployment
-   ```javascript
-   // Triple-check each address
-   const payees = [
-       "0x742d35Cc6634C0532925a3b8D402EDeD60000000",  // ✅ Checksum valid
-       "0x742D35CC6634C0532925A3B8D402EDED60000000"   // ✅ Same address
-   ];
-   
-   // Validate
-   for (const addr of payees) {
-       if (!hre.ethers.isAddress(addr)) {
-           throw new Error(`Invalid address: ${addr}`);
-       }
-       console.log(`✅ ${addr} is valid`);
-   }
-   ```
+// Example: Gnosis Safe deployment
+const safe = await hre.ethers.getContractAt("GnosisSafe", SAFE_ADDRESS);
 
-2. **Test Withdrawals** immediately after deployment
+// Create migration transaction
+const deployData = SplitStream.getDeployTransaction(payees, shares).data;
 
-3. **Use Multisig** for high-value payees
-
-4. **Backup Private Keys** securely
-
----
-
-## 7. Testing Migration
-
-### Testnet Rehearsal
-
-**Before ANY mainnet migration, rehearse on testnet!**
-
-#### Step-by-Step Testnet Practice:
-
-```bash
-# 1. Deploy "old" contract to testnet
-npx hardhat run scripts/deploy.js --network base-goerli
-
-# 2. Send test funds
-npx hardhat run scripts/sendTestPayment.js --network base-goerli
-
-# 3. Test releases
-npx hardhat run scripts/releaseAll.js --network base-goerli
-
-# 4. Export state
-npx hardhat run scripts/exportState.js --network base-goerli
-
-# 5. Deploy "new" contract
-npx hardhat run scripts/migrateToNewContract.js --network base-goerli
-
-# 6. Verify new contract
-CONTRACT_ADDRESS=0xNEW npx hardhat run scripts/checkBalance.js --network base-goerli
-
-# 7. Send test payment to new contract
-CONTRACT_ADDRESS=0xNEW npx hardhat run scripts/sendTestPayment.js --network base-goerli
-
-# 8. Test withdrawal from new contract
-CONTRACT_ADDRESS=0xNEW npx hardhat run scripts/releasePayment.js --network base-goerli
+// Requires 2/3 signatures to execute
+await safe.execTransaction(
+  FACTORY_ADDRESS,
+  0,
+  deployData,
+  SafeOperation.DelegateCall,
+  0, 0, 0,
+  ethers.ZeroAddress,
+  ethers.ZeroAddress,
+  signatures
+);
 ```
 
-**Time Investment:** 1-2 hours  
-**Value:** Priceless! Catch issues before mainnet.
+---
+
+## Testing Migration
+
+### Testnet Rehearsal Steps
+
+#### Complete Migration Rehearsal Checklist
+
+```bash
+# 1. Deploy old contract to testnet
+echo "Deploying v1.0 to Base Sepolia..."
+npx hardhat run scripts/deployV1.js --network base-sepolia
+# Save address: OLD_TESTNET_ADDRESS
+
+# 2. Send test payments
+cast send $OLD_TESTNET_ADDRESS --value 1ether --rpc-url $BASE_SEPOLIA_RPC
+
+# 3. Verify distribution
+npx hardhat run scripts/checkBalance.js --network base-sepolia
+
+# 4. Practice migration
+npx hardhat run scripts/migrate.js --network base-sepolia
+# Save new address: NEW_TESTNET_ADDRESS
+
+# 5. Verify new contract
+npx hardhat run scripts/verifyMigration.js --network base-sepolia
+
+# 6. Test rollback scenario
+npx hardhat run scripts/rollback.js --network base-sepolia
+
+# 7. Document results
+echo "✅ Migration rehearsal complete. Results:" > testnet-migration-report.txt
+```
 
 ---
 
-### Migration Validation Checklist
+### Validation Checklist
 
-#### Pre-Deployment Validation
+#### Pre-Migration Validation
 
-- [ ] All new payee addresses verified (checksummed)
-- [ ] Shares sum to expected total
-- [ ] Deployment script tested on testnet
-- [ ] Gas estimates acceptable
-- [ ] Sufficient ETH for deployment
+- [ ] Old contract balance verified
+- [ ] All payee addresses confirmed accessible
+- [ ] Pending payments calculated correctly
+- [ ] New contract configuration reviewed
+- [ ] Gas costs estimated
+- [ ] Testnet migration successful
 - [ ] All stakeholders notified
-
-#### Post-Deployment Validation
-
-- [ ] New contract deployed successfully
-- [ ] Contract code verified on block explorer
-- [ ] All payees present in new contract
-- [ ] All shares correct in new contract
-- [ ] Total shares matches expected
-- [ ] Test transaction sent and received
-- [ ] Test withdrawal successful
-- [ ] Events emitting correctly
-- [ ] Monitoring script running
+- [ ] Rollback plan documented
 
 #### Post-Migration Validation
 
-- [ ] Old contract fully drained (or dust only)
-- [ ] All integrations updated
+- [ ] Old contract balance zero or acceptable
+- [ ] New contract deployed and verified
+- [ ] All payees present in new contract
+- [ ] Share distribution correct
+- [ ] Test payment sent and distributed correctly
+- [ ] Monitoring active
 - [ ] Documentation updated
-- [ ] Team notified
-- [ ] Customers notified (if applicable)
-- [ ] Migration record saved
-- [ ] Transaction history exported
+- [ ] Integrations updated
 
 ---
 
 ### Common Pitfalls
 
-#### ❌ Pitfall 1: Wrong Address Checksum
+#### Pitfall 1: Forgetting to Release Pending Payments
 
-**Problem:**
+**Problem**: Migrating without releasing pending payments loses funds.
+
+**Solution**:
 ```javascript
-const payees = ["0xabc..."];  // Lowercase - might be wrong!
+// Always check and release before migrating
+const pending = await contract.releasable(payeeAddress);
+if (pending > 0) {
+  console.warn(`⚠️  ${payeeAddress} has ${hre.ethers.formatEther(pending)} ETH pending!`);
+  // Don't proceed without releasing
+}
 ```
 
-**Solution:**
-```javascript
-const payees = ["0xABC..."];  // Use checksummed address
+#### Pitfall 2: Incorrect Share Calculation
 
-// Or validate:
-if (!hre.ethers.isAddress(addr)) {
-    throw new Error("Invalid");
+**Problem**: New shares don't sum to same total as old shares.
+
+**Solution**:
+```javascript
+// Validate total shares
+const totalShares = shares.reduce((a, b) => a + b, 0);
+if (totalShares !== 100) { // Or expected total
+  throw new Error(`Shares must sum to 100, got ${totalShares}`);
+}
+```
+
+#### Pitfall 3: Not Testing on Testnet
+
+**Problem**: Bugs discovered on mainnet cost real money.
+
+**Solution**: ALWAYS migrate on testnet first, wait 24-48h, then mainnet.
+
+#### Pitfall 4: Losing Access to Old Contract
+
+**Problem**: Private keys lost, can't release final payments.
+
+**Solution**:
+```bash
+# Verify key access before migration
+cast wallet address --private-key $PRIVATE_KEY
+
+# Test signing a transaction
+cast send $OLD_CONTRACT_ADDRESS "totalShares()" --private-key $PRIVATE_KEY --rpc-url $RPC
+```
+
+#### Pitfall 5: Gas Price Spikes During Migration
+
+**Problem**: Migration times out or costs too much due to high gas.
+
+**Solution**:
+```javascript
+// Monitor gas and wait for optimal time
+const gasPrice = await hre.ethers.provider.getFeeData();
+console.log(`Current base fee: ${hre.ethers.formatUnits(gasPrice.maxFeePerGas, "gwei")} gwei`);
+
+if (gasPrice.maxFeePerGas > hre.ethers.parseUnits("50", "gwei")) {
+  console.warn("⚠️  Gas too high, waiting...");
+  // Delay migration
 }
 ```
 
 ---
 
-#### ❌ Pitfall 2: Forgetting to Release Old Funds
+## Emergency Procedures
 
-**Problem:** Deploy new contract, forget old one has funds
+### Emergency Contact Protocol
 
-**Solution:** Always run `releaseAll.js` on old contract first!
-
----
-
-#### ❌ Pitfall 3: Shares Don't Sum Correctly
-
-**Problem:**
-```javascript
-const shares = [33, 33, 33];  // Only 99 total!
-```
-
-**Solution:**
-```javascript
-const shares = [33, 33, 34];  // 100 total
-const sum = shares.reduce((a, b) => a + b, 0);
-console.log(`Total shares: ${sum}`);  // Verify!
-```
-
----
-
-#### ❌ Pitfall 4: Updating Wrong Contract Address
-
-**Problem:** Update .env but not frontend config
-
-**Solution:** Maintain checklist of ALL places address appears:
-- `.env`
-- Frontend config
-- Backend config
-- Documentation
-- Monitoring scripts
-- README
-- Team wiki
-
----
-
-#### ❌ Pitfall 5: Not Testing First
-
-**Problem:** Deploy directly to mainnet without testing
-
-**Solution:** ALWAYS test on testnet first!
-
----
-
-## 8. Scripts & Automation
-
-### Complete Migration Script
-
-```javascript
-// scripts/completeMigration.js
-const hre = require("hardhat");
-const fs = require("fs");
-
-async function main() {
-    const readline = require('readline').createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
-    
-    const question = (query) => new Promise((resolve) => readline.question(query, resolve));
-    
-    console.log("🔄 SplitStream Migration Tool\n");
-    console.log("This will guide you through the migration process.\n");
-    
-    // Step 1: Get old contract address
-    const oldAddress = await question("Enter OLD contract address: ");
-    
-    if (!hre.ethers.isAddress(oldAddress)) {
-        console.error("❌ Invalid address");
-        process.exit(1);
+```json
+{
+  "emergencyContacts": [
+    {
+      "role": "Primary Admin",
+      "contact": "admin@example.com",
+      "phone": "+1-XXX-XXX-XXXX",
+      "availability": "24/7"
+    },
+    {
+      "role": "Smart Contract Developer",
+      "contact": "dev@example.com",
+      "availability": "Business hours"
+    },
+    {
+      "role": "Security Auditor",
+      "contact": "security@audit-firm.com",
+      "availability": "On-call"
     }
-    
-    // Step 2: Export old state
-    console.log("\n📊 Exporting old contract state...");
-    const SplitStream = await hre.ethers.getContractFactory("SplitStream");
-    const oldContract = SplitStream.attach(oldAddress);
-    
-    const oldState = {
-        address: oldAddress,
-        balance: hre.ethers.formatEther(await hre.ethers.provider.getBalance(oldAddress)),
-        totalShares: (await oldContract.totalShares()).toString(),
-        totalReleased: hre.ethers.formatEther(await oldContract.totalReleased())
-    };
-    
-    console.log("Old Contract State:", oldState);
-    
-    // Step 3: Confirm release all
-    const confirmRelease = await question("\n⚠️  Release all pending payments? (yes/no): ");
-    
-    if (confirmRelease.toLowerCase() === 'yes') {
-        console.log("💸 Releasing all payments...");
-        // Release logic here (from releaseAll.js)
-        console.log("✅ All payments released");
-    }
-    
-    // Step 4: Get new parameters
-    console.log("\n📝 Enter new contract parameters:");
-    const payeeCount = parseInt(await question("Number of payees: "));
-    
-    const newPayees = [];
-    const newShares = [];
-    
-    for (let i = 0; i < payeeCount; i++) {
-        const addr = await question(`Payee ${i + 1} address: `);
-        const share = parseInt(await question(`Payee ${i + 1} shares: `));
-        
-        if (!hre.ethers.isAddress(addr)) {
-            console.error(`❌ Invalid address: ${addr}`);
-            process.exit(1);
-        }
-        
-        newPayees.push(addr);
-        newShares.push(share);
-    }
-    
-    const totalShares = newShares.reduce((a, b) => a + b, 0);
-    console.log(`\nTotal shares: ${totalShares}`);
-    
-    // Step 5: Confirm deployment
-    console.log("\n📋 New Contract Configuration:");
-    for (let i = 0; i < newPayees.length; i++) {
-        console.log(`  ${newPayees[i]}: ${newShares[i]} shares (${(newShares[i]/totalShares*100).toFixed(2)}%)`);
-    }
-    
-    const confirmDeploy = await question("\n🚀 Deploy new contract? (yes/no): ");
-    
-    if (confirmDeploy.toLowerCase() === 'yes') {
-        console.log("Deploying...");
-        const newContract = await SplitStream.deploy(newPayees, newShares);
-        await newContract.waitForDeployment();
-        
-        const newAddress = newContract.target || newContract.address;
-        console.log(`✅ New contract deployed: ${newAddress}`);
-        
-        // Save migration record
-        const record = {
-            date: new Date().toISOString(),
-            oldContract: oldAddress,
-            newContract: newAddress,
-            oldState,
-            newPayees,
-            newShares
-        };
-        
-        fs.writeFileSync(
-            `migration_${Date.now()}.json`,
-            JSON.stringify(record, null, 2)
-        );
-        
-        console.log("\n✅ Migration complete!");
-        console.log(`   Old: ${oldAddress}`);
-        console.log(`   New: ${newAddress}`);
-    }
-    
-    readline.close();
+  ],
+  "escalationPath": [
+    "1. Detect issue",
+    "2. Notify Primary Admin immediately",
+    "3. If unavailable, contact Developer",
+    "4. If critical vulnerability, contact Security Auditor",
+    "5. Execute emergency procedures"
+  ]
 }
-
-main().catch(console.error);
 ```
 
-**Usage:**
-```bash
-npx hardhat run scripts/completeMigration.js --network base
-```
+### Emergency Shutdown Procedure
 
----
-
-### Quick Reference Commands
+> [!CAUTION]
+> SplitStream has no pause functionality. Emergency response involves fund extraction only.
 
 ```bash
-# Export current state
-CONTRACT_ADDRESS=0x... npx hardhat run scripts/exportState.js --network base
+# Emergency response script
+#!/bin/bash
 
-# Release all payments
-CONTRACT_ADDRESS=0x... npx hardhat run scripts/releaseAll.js --network base
+# emergency-response.sh
 
-# Deploy new contract
-npx hardhat run scripts/deploy.js --network base
+echo "🚨 EMERGENCY RESPONSE ACTIVATED"
+echo "Contract: $EMERGENCY_CONTRACT_ADDRESS"
+echo "Reason: $EMERGENCY_REASON"
 
-# Check balance
-CONTRACT_ADDRESS=0x... npx hardhat run scripts/checkBalance.js --network base
+# 1. Document the emergency
+cat > emergency-$(date +%s).json << EOF
+{
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "contract": "$EMERGENCY_CONTRACT_ADDRESS",
+  "reason": "$EMERGENCY_REASON",
+  "respondent": "$(git config user.email)"
+}
+EOF
 
-# Export history
-CONTRACT_ADDRESS=0x... DEPLOYMENT_BLOCK=123456 npx hardhat run scripts/exportHistory.js --network base
+# 2. Extract all funds
+EMERGENCY_CONTRACT_ADDRESS=$EMERGENCY_CONTRACT_ADDRESS \
+  npx hardhat run scripts/emergencyExtract.js --network base
 
-# Monitor events
-CONTRACT_ADDRESS=0x... npx hardhat run scripts/monitor.js --network base
+# 3. Notify all stakeholders
+node scripts/sendEmergencyNotification.js
+
+# 4. Post public notice
+echo "🚨 NOTICE: Emergency migration in progress. Stand by for updates." \
+  | npx hardhat run scripts/postToSocial.js
+
+echo "✅ Emergency procedures complete"
+echo "Next: Deploy fixed contract and resume operations"
 ```
 
 ---
 
 ## Summary
 
-### Migration Best Practices
+### Quick Reference
 
-1. ✅ **Always test on testnet first**
-2. ✅ **Export all data before migrating**
-3. ✅ **Release all pending payments from old contract**
-4. ✅ **Verify new contract thoroughly**
-5. ✅ **Document everything**
-6. ✅ **Communicate clearly with all stakeholders**
-7. ✅ **Keep migration records**
-8. ✅ **Monitor for 24-48 hours post-migration**
+| Scenario | Action | RiskLevel |
+|----------|--------|-----------|
+| Add payee | Deploy new contract with updated payees | 🟡 Medium |
+| Remove payee | Release final payment, deploy new contract | 🟡 Medium |
+| Change shares | Release all pending, deploy with new shares | 🟡 Medium |
+| Bug fix | Emergency extract, deploy fixed version | 🔴 High |
+| Version upgrade | Standard migration process | 🟢 Low |
+| Network change | Export config, deploy to new network | 🟡 Medium |
 
-### Migration Timeline
+### Best Practices
 
-| Phase | Duration | Key Activities |
-|-------|----------|----------------|
-| Planning | 1-2 days | Requirements, communication, testing |
-| Preparation | 2-4 hours | Scripts, testnet rehearsal |
-| Execution | 1-2 hours | Deploy, release, update |
-| Validation | 2-4 hours | Testing, monitoring |
-| Post-Migration | 1-2 days | Monitoring, support |
-
-### Support
-
-For migration assistance:
-- Review this guide
-- Check [SECURITY_AUDIT.md](./SECURITY_AUDIT.md)
-- Review [README.md](../README.md)
-- Test on testnet first
+1. **Always test on testnet first** - No exceptions
+2. **Release pending payments before migration** - Don't lock funds
+3. **Document everything** - Future you will thank you
+4. **Verify smart contract code** - Never deploy unverified contracts
+5. **Communicate with stakeholders** - Surprises are bad
+6. **Have a rollback plan** - Hope for best, plan for worst
+7. **Monitor after migration** - Watch for unexpected behavior
+8. **Keep historical data** - Export before deprecating old contracts
 
 ---
 
-**Last Updated:** 2026-01-22  
-**Version:** 1.0.0
+## Additional Resources
+
+- [SplitStream Documentation](../README.md)
+- [Security Audit Report](./SECURITY_AUDIT.md)
+- [Deployment Guide](../README.md#deployment)
+- [Base Network Status](https://status.base.org/)
+- [Basescan Contract Verification](https://basescan.org/)
+
+---
+
+**Last Updated**: 2026-01-23  
+**Version**: 1.0.0  
+**Maintainer**: SplitStream Protocol Team
