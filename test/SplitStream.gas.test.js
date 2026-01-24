@@ -10,11 +10,22 @@ describe("SplitStream Gas Benchmarks", function () {
     const ETH_PRICE_USD = 3000;
 
     before(async function () {
-        [owner, payee1, payee2, payee3, payee4, payee5, ...others] = await ethers.getSigners();
+        const allSigners = await ethers.getSigners();
+        [owner, payee1, payee2, payee3, payee4, payee5, ...others] = allSigners;
+
+        console.log(`    ✅ Available signers: ${allSigners.length}`);
 
         // Prepare arrays for larger deployments
+        // Ensure we have enough signers (need at least 11 for payees10, 21 for payees20)
+        if (allSigners.length < 11) {
+            console.warn(`    ⚠️  Warning: Not enough signers for 10-payee test (have ${allSigners.length}, need 11)`);
+        }
+        if (allSigners.length < 21) {
+            console.warn(`    ⚠️  Warning: Not enough signers for 20-payee test (have ${allSigners.length}, need 21)`);
+        }
+
         payees10 = [payee1, payee2, payee3, payee4, payee5, ...others.slice(0, 5)];
-        payees20 = [payee1, payee2, payee3, payee4, payee5, ...others.slice(0, 15)];
+        payees20 = [payee1, payee2, payee3, payee4, payee5, ...others.slice(0, Math.min(15, others.length))];
     });
 
     /**
@@ -110,10 +121,15 @@ describe("SplitStream Gas Benchmarks", function () {
             expect(receipt.gasUsed).to.be.lessThan(1300000);
         });
 
-        it.skip("Should measure gas for deploying with 20 payees", async function () {
+        it("Should measure gas for deploying with 20 payees", async function () {
+            // Check if we have enough signers
+            if (payees20.length < 20) {
+                this.skip(); // Skip test if not enough signers available
+            }
+
             const SplitStream = await ethers.getContractFactory("SplitStream");
             const addresses = payees20.map(p => p.address);
-            const shares = Array(20).fill(5); // Equal shares for simplicity
+            const shares = Array(addresses.length).fill(5); // Equal shares for simplicity
 
             const splitStream = await SplitStream.deploy(addresses, shares);
             const receipt = await splitStream.deploymentTransaction().wait();
@@ -551,6 +567,128 @@ describe("SplitStream Gas Benchmarks", function () {
             console.log(`✅ Deploy on Base for ~100× cost savings vs Ethereum`);
             console.log(`✅ View functions are free when called from wallets`);
             console.log(`\n═══════════════════════════════════════════════════════════════\n`);
+        });
+
+        it("Should generate markdown-formatted tables for documentation", async function () {
+            console.log(`\n\n`);
+            console.log(`═══════════════════════════════════════════════════════════════`);
+            console.log(`        📋 MARKDOWN TABLES FOR DOCUMENTATION                  `);
+            console.log(`═══════════════════════════════════════════════════════════════`);
+            console.log(`\n📝 Copy the tables below directly into GAS_OPTIMIZATION.md\n`);
+
+            // Function to generate markdown table
+            function generateMarkdownTable(categoryName, results) {
+                let markdown = `\n### ${categoryName}\n\n`;
+                markdown += `| Operation | Gas Used | Base Cost (0.001-0.005 gwei) | Ethereum Cost (30-100 gwei) |\n`;
+                markdown += `|-----------|----------|------------------------------|----------------------------|\n`;
+
+                for (const result of results) {
+                    const costs = calculateCosts(result.gasUsedNum);
+                    const baseCost = `$${costs["Base (0.001 gwei)"].usd} - $${costs["Base Peak (0.005 gwei)"].usd}`;
+                    const ethCost = `$${costs["Ethereum (30 gwei)"].usd} - $${costs["Ethereum Peak (100 gwei)"].usd}`;
+
+                    markdown += `| ${result.operation} | ${result.gasUsed} | ${baseCost} | ${ethCost} |\n`;
+                }
+
+                // Add average
+                if (results.length > 0) {
+                    const avg = Math.round(
+                        results.reduce((sum, r) => sum + r.gasUsedNum, 0) / results.length
+                    );
+                    const avgCosts = calculateCosts(avg);
+                    markdown += `| **Average** | **${avg.toLocaleString()}** | **$${avgCosts["Base (0.001 gwei)"].usd} - $${avgCosts["Base Peak (0.005 gwei)"].usd}** | **$${avgCosts["Ethereum (30 gwei)"].usd} - $${avgCosts["Ethereum Peak (100 gwei)"].usd}** |\n`;
+                }
+
+                return markdown;
+            }
+
+            // Generate tables by category
+            const categories = [...new Set(gasResults.map(r => r.category))];
+            let fullMarkdown = `# Gas Benchmark Results\n\n`;
+            fullMarkdown += `> Generated: ${new Date().toISOString()}\n`;
+            fullMarkdown += `> ETH Price: $${ETH_PRICE_USD}\n\n`;
+
+            // Summary table
+            fullMarkdown += `## Summary\n\n`;
+            fullMarkdown += `| Category | Avg Gas | Base Cost Range | Operations Tested |\n`;
+            fullMarkdown += `|----------|---------|-----------------|-------------------|\n`;
+
+            for (const category of categories) {
+                const categoryResults = gasResults.filter(r => r.category === category);
+                if (categoryResults.length > 0) {
+                    const avg = Math.round(
+                        categoryResults.reduce((sum, r) => sum + r.gasUsedNum, 0) / categoryResults.length
+                    );
+                    const costs = calculateCosts(avg);
+                    const baseCostRange = `$${costs["Base (0.001 gwei)"].usd}-$${costs["Base Peak (0.005 gwei)"].usd}`;
+                    fullMarkdown += `| ${category} | ${avg.toLocaleString()} | ${baseCostRange} | ${categoryResults.length} |\n`;
+                }
+            }
+
+            fullMarkdown += `\n---\n`;
+
+            // Detailed tables
+            for (const category of categories) {
+                const categoryResults = gasResults.filter(r => r.category === category);
+                if (categoryResults.length > 0) {
+                    fullMarkdown += generateMarkdownTable(category, categoryResults);
+                }
+            }
+
+            // Key insights
+            const sortedByGas = [...gasResults].sort((a, b) => b.gasUsedNum - a.gasUsedNum);
+            const mostExpensive = sortedByGas[0];
+            const leastExpensive = sortedByGas[sortedByGas.length - 1];
+
+            fullMarkdown += `\n---\n\n## Key Insights\n\n`;
+            fullMarkdown += `- **Most Expensive Operation**: ${mostExpensive.operation} (${mostExpensive.gasUsed.toLocaleString()} gas)\n`;
+            fullMarkdown += `- **Least Expensive Operation**: ${leastExpensive.operation} (${leastExpensive.gasUsed.toLocaleString()} gas)\n`;
+
+            // Deployment scaling
+            const deployments = gasResults.filter(r => r.category === "Deployment");
+            if (deployments.length >= 2) {
+                const payee3 = deployments.find(d => d.operation.includes("3 payees"));
+                const payee20 = deployments.find(d => d.operation.includes("20 payees"));
+
+                if (payee3 && payee20) {
+                    const costIncrease = ((payee20.gasUsedNum - payee3.gasUsedNum) / payee3.gasUsedNum * 100).toFixed(1);
+                    const gasPerExtraPayee = Math.round((payee20.gasUsedNum - payee3.gasUsedNum) / 17);
+                    fullMarkdown += `- **Deployment Scaling**: Adding 17 payees (3→20) increases gas by ${costIncrease}% (~${gasPerExtraPayee.toLocaleString()} gas per additional payee)\n`;
+                }
+            }
+
+            // Release cost analysis
+            const releases = gasResults.filter(r => r.category === "Release" && r.operation.includes("ETH balance"));
+            if (releases.length > 0) {
+                const avgRelease = Math.round(
+                    releases.reduce((sum, r) => sum + r.gasUsedNum, 0) / releases.length
+                );
+                const costs = calculateCosts(avgRelease);
+                fullMarkdown += `- **Average Release Cost**: ${avgRelease.toLocaleString()} gas ($${costs["Base (0.001 gwei)"].usd} - $${costs["Base Peak (0.005 gwei)"].usd} on Base)\n`;
+                fullMarkdown += `- **Release Cost Independence**: Payment size does NOT affect gas usage\n`;
+            }
+
+            // Payment reception
+            const receptions = gasResults.filter(r => r.category === "Payment Reception" && r.operation.includes("Receive"));
+            if (receptions.length > 0) {
+                const avgReception = Math.round(
+                    receptions.reduce((sum, r) => sum + r.gasUsedNum, 0) / receptions.length
+                );
+                fullMarkdown += `- **Average Payment Reception**: ${avgReception.toLocaleString()} gas (cost independent of payment size)\n`;
+            }
+
+            fullMarkdown += `\n## Recommendations\n\n`;
+            fullMarkdown += `1. ✅ Deploy with 3-10 payees for optimal cost-efficiency\n`;
+            fullMarkdown += `2. ✅ Batch large payments rather than many small ones to save on reception costs\n`;
+            fullMarkdown += `3. ✅ Let balances accumulate before withdrawing to minimize release calls\n`;
+            fullMarkdown += `4. ✅ Deploy on Base network for ~100× cost savings vs Ethereum mainnet\n`;
+            fullMarkdown += `5. ✅ View functions are free when called from wallets/scripts\n`;
+
+            // Output the markdown
+            console.log(fullMarkdown);
+            console.log(`\n═══════════════════════════════════════════════════════════════`);
+            console.log(`📄 Markdown tables generated above - ready to copy!`);
+            console.log(`═══════════════════════════════════════════════════════════════\n`);
         });
     });
 });
